@@ -1,0 +1,41 @@
+{
+  "runtimeTarget": {
+    "name": ".NETCoreApp,Version=v2.1",
+    "signature": "2604764ff14ddeca1025752d14fd8247d9b080d6"
+  },
+  "compilationOptions": {},
+  "targets": {
+    ".NETCoreApp,Version=v2.1": {
+      "EDMXTrimmer/1.0.0": {
+        "dependencies": {
+          "CommandLineParser": "2.4.3"
+        },
+        "runtime": {
+          "EDMXTrimmer.dll": {}
+        }
+      },
+      "CommandLineParser/2.4.3": {
+        "runtime": {
+          "lib/netstandard2.0/CommandLine.dll": {
+            "assemblyVersion": "2.4.3.0",
+            "fileVersion": "2.4.3.0"
+          }
+        }
+      }
+    }
+  },
+  "libraries": {
+    "EDMXTrimmer/1.0.0": {
+      "type": "project",
+      "serviceable": false,
+      "sha512": ""
+    },
+    "CommandLineParser/2.4.3": {
+      "type": "package",
+      "serviceable": true,
+      "sha512": "sha512-U2FC9Y8NyIxxU6MpFFdWWu1xwiqz/61v/Doou7kmVjpeIEMLWyiNNkzNlSE84kyJ0O1LKApuEj5z48Ow0Hi4OQ==",
+      "path": "commandlineparser/2.4.3",
+      "hashPath": "commandlineparser.2.4.3.nupkg.sha512"
+    }
+  }
+}
