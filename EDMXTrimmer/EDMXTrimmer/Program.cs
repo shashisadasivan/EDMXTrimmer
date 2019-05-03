@@ -18,6 +18,12 @@ namespace EDMXTrimmer
             Separator = ',')]
         public IEnumerable<string> EntitiesToKeep { get; set; }
 
+        [Option(
+            Required = false,
+            HelpText = "Verbose information",
+            Default = false)]
+        public bool verbose { get; set; }
+
         //[Option(
         //    Required = false,
         //    HelpText = "If trimming then set name of file, otherwise will create default in executing directory")]
@@ -41,11 +47,12 @@ namespace EDMXTrimmer
             CommandLine.Parser.Default.ParseArguments<Options>(args)
                 .WithParsed<Options>(opts => opt = opts);
 
-            EdmxTrimmer trimmer = new EdmxTrimmer(opt.EdmxFile);
+            EdmxTrimmer trimmer = new EdmxTrimmer(opt.EdmxFile, opt.verbose);
             if (opt.EntitiesToKeep.Count() > 0)
             {
                 //TODO: use the output file name
-                trimmer.Trim(opt.EntitiesToKeep.ToList());
+                //trimmer.Trim(opt.EntitiesToKeep.ToList());
+                trimmer.AnalyzeAndTrim(opt.EntitiesToKeep.ToList());
             }
             else
             {
