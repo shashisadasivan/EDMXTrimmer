@@ -14,9 +14,9 @@ dotnet EDMXTrimmer.dll --edmxfile <your file name here> --entitiesToKeep <entity
 **edmxfile** : This is the OData metadata file that you can download off https://<url>/data/$metadata
 Save the ouptut to a file and use it in the command line argument
 
-**entitiesToKeep** : Enter the entity names as a CSV string (plural) E.g. CustomersV3,VendorsV2
+**entitiesToKeep** : Each entity has a public name and collection name. E.g. CustomersV3 entity has a collection name of CustomersV3 (plural) and CustomerV3 (singular to define). you need to mention both these for each entity that you need.
 
 ### Example
 ```
-dotnet EDMXTrimmer.dll --edmxfile "C:\temp\custODataMetadata.edmx" --entitiesToKeep CustomersV3,VendorsV2
+dotnet EDMXTrimmer.dll --edmxfile "C:\temp\custODataMetadata.edmx" --entitiesToKeep CustomersV3,CustomerV3
 ```
