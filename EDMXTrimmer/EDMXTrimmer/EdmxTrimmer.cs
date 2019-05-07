@@ -1,153 +1,102 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Linq;
 using System.Text;
 using System.Xml;
+using System.Linq;
+using System.Xml.Linq;
 
 namespace EDMXTrimmer
 {
-    //TODO: add comments on methods and their purpose
     class EdmxTrimmer
     {
-        private const string PREFIXSTR = "-";
         public string EdmxFile { get; private set; }
-        private XmlDocument _xmlDocument;
-        private bool _verbose;
-        
+        public bool Verbose { get; private set; }
         public List<string> EntitiesToKeep { get; private set; }
+        public string OutputFileName { get; set; }
 
-        public EdmxTrimmer(string edmxFile, bool verbose = false )
+        private XmlDocument _xmlDocument;
+        private const string ENTITY_TYPE = "EntityType";
+        private const string ENTITY_SET = "EntitySet";
+        private const string NAVIGATION_PROPERTY = "NavigationProperty";
+        private const string ACTION = "Action";
+        private const string ATTRIBUTE_NAME = "Name";
+
+        public EdmxTrimmer(string edmxFile, string outputFileName,  bool verbose = true, List<String> entitiesToKeep = null)
         {
             this.EdmxFile = edmxFile;
-            this._verbose = verbose;
-        }
+            this.Verbose = verbose;
+            this.OutputFileName = outputFileName;
 
-        public void Run()
-        {
-            //this.EntitiesToKeep = new List<string>();
-            this.LoadFile();
-            this.AnalyzeFile(trim:false, entitiesToKeep:EntitiesToKeep);
-        }
-
-        public void Trim(List<String> entitiesToKeep)
-        {
-            this.LoadFile();
-            this.AnalyzeFile(trim:true, entitiesToKeep:entitiesToKeep);
-        }
-
-        public void AnalyzeAndTrim(List<String> entitiesToKeep)
-        {
             this.EntitiesToKeep = new List<string>();
-            this.EntitiesToKeep.AddRange(entitiesToKeep);
-            this.Run();
-            this.Trim(this.EntitiesToKeep);
-        }
-
-        private void AnalyzeFile(string prefix = "", bool trim = false, List<String> entitiesToKeep = null)
-        {
-            foreach (XmlNode node in this._xmlDocument.DocumentElement.ChildNodes)
+            if(entitiesToKeep != null && entitiesToKeep.Count > 0)
             {
-                if (this._verbose)
-                {
-                    Console.WriteLine($"{node.Name}");
-                }
-                this.AnalyzeNode(node, PREFIXSTR, trim, entitiesToKeep);
-            }
-            if (trim == true)
-            {
-                this._xmlDocument.Save("Output.edmx");
-            }
-        }
-
-        private void AnalyzeNode(XmlNode node, string prefix = "", bool trim = false, List<String> entitiesToKeep = null)
-        {
-            List<XmlNode> nodesToRemove = new List<XmlNode>();
-            if(entitiesToKeep == null)
-            {
-                entitiesToKeep = new List<string>();
-            }
-            foreach (XmlNode childNode in node.ChildNodes)
-            {
-                if (childNode.Name == "EntitySet" || childNode.Name == "EntityType")
-                {
-                    if (trim == true
-                        && entitiesToKeep != null
-                        && entitiesToKeep.Count > 0
-                        && entitiesToKeep.Contains(childNode.Attributes["Name"].Value, StringComparer.OrdinalIgnoreCase) == false)
-                    {
-                        // Delete this
-                        if (this._verbose)
-                        {
-                            Console.WriteLine($"Deleting: {prefix}{childNode.Name}-{childNode.Attributes["Name"].Value}");
-                        }
-                        //node.RemoveChild(childNode);
-                        nodesToRemove.Add(childNode);
-                    }
-                    else
-                    {
-                        // Remove NavigationProperties here
-                        if (trim == true
-                            && childNode.Name == "EntityType"
-                            && childNode.HasChildNodes == true)
-                        {
-                            foreach (XmlNode childNodeNavProp in childNode.ChildNodes)
-                            {
-                                if (childNodeNavProp.Name == "NavigationProperty")
-                                {
-                                    nodesToRemove.Add(childNodeNavProp);
-                                }
-                            }
-                        }
-
-                        if (trim == false
-                            && childNode.Name == "EntitySet"
-                            && entitiesToKeep.Contains(childNode.Attributes["Name"].Value, StringComparer.OrdinalIgnoreCase) == true)
-                        {
-                            // If this is the entitySet, extract the entityType here
-                            var entityType = childNode.Attributes["EntityType"].Value;
-                            // this is stored as Microsoft.Dynamics.DataEntities.CustomerV3, we only want the name CustomerV3
-                            entityType = entityType.Replace("Microsoft.Dynamics.DataEntities.", "");
-                            this.EntitiesToKeep.Add(entityType);
-                            if (this._verbose)
-                            {
-                                Console.WriteLine($"Found entityType {entityType} from Entity {childNode.Attributes["Name"].Value}");
-                            }
-                            //Console.WriteLine($"{prefix}{node.Name}");
-                            if (this._verbose)
-                            {
-                                Console.WriteLine($"{prefix}{childNode.Name}-{childNode.Attributes["Name"].Value}");
-                            }
-                        }
-                    }
-                }
-                else if (trim == true
-                        && childNode.Name == "Action")
-                {
-                    // delete all actions
-                    nodesToRemove.Add(childNode);
-                }
-
-                if (!(childNode.Name == "EntitySet" || childNode.Name == "EntityType")
-                    && childNode.HasChildNodes)
-                {
-                    this.AnalyzeNode(childNode, prefix + PREFIXSTR, trim, entitiesToKeep);
-                }
+                this.EntitiesToKeep.AddRange(entitiesToKeep);
             }
 
-            if(nodesToRemove.Count > 0)
-            {
-                foreach (var nodeToRemove in nodesToRemove)
-                {
-                    XmlNode parentNode = nodeToRemove.ParentNode;
-                    parentNode.RemoveChild(nodeToRemove);
-                }
-            }
+            this.LoadFile();
         }
 
         private void LoadFile()
         {
             this._xmlDocument = new XmlDocument();
             this._xmlDocument.Load(this.EdmxFile);
+        }
+
+        public void AnalyzeFile()
+        {
+            var entitySets = this._xmlDocument.GetElementsByTagName(ENTITY_SET).Cast<XmlNode>().ToList();
+            var entityTypes = this._xmlDocument.GetElementsByTagName(ENTITY_TYPE).Cast<XmlNode>().ToList();
+            var entityActions = this._xmlDocument.GetElementsByTagName(ACTION).Cast<XmlNode>().ToList();
+
+            List<String> entityTypesFound = new List<string>();
+            //if (this.Verbose)
+            //{
+            //    // Print list of ALL entities
+            //    entitySets.ForEach(n => Console.WriteLine(n.Attributes[ATTRIBUTE_NAME].Value));
+            //}
+
+            var entitiesKeep = entitySets.Where(n => this.EntitiesToKeep.Contains(n.Attributes[ATTRIBUTE_NAME].Value)).ToList();
+            entitiesKeep.ForEach(n =>
+            {
+                string entityType = n.Attributes[ENTITY_TYPE].Value;
+                entityType = entityType.Replace("Microsoft.Dynamics.DataEntities.", "");
+                entityTypesFound.Add(entityType);
+            });
+
+            if (this.Verbose)
+            {
+                Console.WriteLine("Entity definitions found:");
+                entityTypesFound.ForEach(n => Console.WriteLine(n));
+            }
+
+            // Remove entities not required (EntitySet)
+            entitySets.Except(entitiesKeep).ToList().ForEach(n => n.ParentNode.RemoveChild(n));
+            //Remove unwanted Nodes in the Entity Set
+            entitiesKeep.ForEach(n =>
+            {
+                // Remove Node NavigationProperty
+                var navProperties = n.ChildNodes.Cast<XmlNode>()
+                    .Where(navProp => navProp.Name.Equals(NAVIGATION_PROPERTY)).ToList();
+                navProperties
+                    .ForEach(navProp => navProp.ParentNode.RemoveChild(navProp));
+            });
+            // Remove all navigation properties
+            this._xmlDocument.GetElementsByTagName(NAVIGATION_PROPERTY).Cast<XmlNode>().ToList()
+                .ForEach(n => n.ParentNode.RemoveChild(n));
+
+            // Remove entity not required (EntityType)
+            var entityTypesKeep = entityTypes.Where(n => entityTypesFound.Contains(n.Attributes[ATTRIBUTE_NAME].Value)).ToList();
+            entityTypes.Except(entityTypesKeep).ToList().ForEach(n => n.ParentNode.RemoveChild(n));
+
+            // Remove all Actions
+            entityActions.ForEach(n => n.ParentNode.RemoveChild(n));
+
+            this._xmlDocument.Save(OutputFileName);
+            if(this.Verbose)
+            {
+                Console.WriteLine($"EDMX Saved to file: {OutputFileName}");
+            }
+
         }
     }
 }
