@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Text;
 using System.Xml;
@@ -20,6 +20,8 @@ namespace EDMXTrimmer
         private const string NAVIGATION_PROPERTY = "NavigationProperty";
         private const string ACTION = "Action";
         private const string ATTRIBUTE_NAME = "Name";
+        private const string ATTRIBUTE_TYPE = "Type";
+        private const string ENTITYNAMESPACE = "Microsoft.Dynamics.DataEntities.";
 
         public EdmxTrimmer(string edmxFile, string outputFileName,  bool verbose = true, List<String> entitiesToKeep = null)
         {
@@ -59,7 +61,7 @@ namespace EDMXTrimmer
             entitiesKeep.ForEach(n =>
             {
                 string entityType = n.Attributes[ENTITY_TYPE].Value;
-                entityType = entityType.Replace("Microsoft.Dynamics.DataEntities.", "");
+                entityType = entityType.Replace(ENTITYNAMESPACE, "");
                 entityTypesFound.Add(entityType);
             });
 
@@ -80,8 +82,10 @@ namespace EDMXTrimmer
                 navProperties
                     .ForEach(navProp => navProp.ParentNode.RemoveChild(navProp));
             });
+            
             // Remove all navigation properties
-            this._xmlDocument.GetElementsByTagName(NAVIGATION_PROPERTY).Cast<XmlNode>().ToList()
+
+            this._xmlDocument.GetElementsByTagName(NAVIGATION_PROPERTY).Cast<XmlNode>().Where(navProp => !entityTypesFound.Any(s => navProp.Attributes[ATTRIBUTE_TYPE].Value.Contains(s))).ToList()
                 .ForEach(n => n.ParentNode.RemoveChild(n));
 
             // Remove entity not required (EntityType)
