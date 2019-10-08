@@ -4,6 +4,7 @@ using System.Text;
 using System.Xml;
 using System.Linq;
 using System.Xml.Linq;
+using System.Text.RegularExpressions;
 
 namespace EDMXTrimmer
 {
@@ -85,7 +86,8 @@ namespace EDMXTrimmer
             
             // Remove all navigation properties
 
-            this._xmlDocument.GetElementsByTagName(NAVIGATION_PROPERTY).Cast<XmlNode>().Where(navProp => !entityTypesFound.Any(s => navProp.Attributes[ATTRIBUTE_TYPE].Value.Contains(s))).ToList()
+            this._xmlDocument.GetElementsByTagName(NAVIGATION_PROPERTY).Cast<XmlNode>()
+                .Where(navProp => !entityTypesFound.Any(entityType => Regex.IsMatch(navProp.Attributes[ATTRIBUTE_TYPE].Value, ENTITYNAMESPACE + entityType + "\\)?$"))).ToList()
                 .ForEach(n => n.ParentNode.RemoveChild(n));
 
             // Remove entity not required (EntityType)
