@@ -85,17 +85,19 @@ namespace EDMXTrimmer
             });
             
             // Remove all navigation properties
-
             this._xmlDocument.GetElementsByTagName(NAVIGATION_PROPERTY).Cast<XmlNode>()
-                .Where(navProp => !entityTypesFound.Any(entityType => Regex.IsMatch(navProp.Attributes[ATTRIBUTE_TYPE].Value, ENTITYNAMESPACE + entityType + "\\)?$"))).ToList()
+                .Where(navProp => !entityTypesFound.Any(entityType => EntityExists(navProp, entityType))).ToList()
                 .ForEach(n => n.ParentNode.RemoveChild(n));
 
             // Remove entity not required (EntityType)
             var entityTypesKeep = entityTypes.Where(n => entityTypesFound.Contains(n.Attributes[ATTRIBUTE_NAME].Value)).ToList();
             entityTypes.Except(entityTypesKeep).ToList().ForEach(n => n.ParentNode.RemoveChild(n));
 
-            // Remove all Actions
-            entityActions.ForEach(n => n.ParentNode.RemoveChild(n));
+            // Remove all Actions         
+            this._xmlDocument.GetElementsByTagName(ACTION).Cast<XmlNode>()
+                .Where(action => !entityTypesFound.Any(entityType => action.ChildNodes.Cast<XmlNode>().
+                    Any(childNode => EntityExists(childNode, entityType)))).ToList()
+                .ForEach(n => n.ParentNode.RemoveChild(n));
 
             this._xmlDocument.Save(OutputFileName);
             if(this.Verbose)
@@ -103,6 +105,10 @@ namespace EDMXTrimmer
                 Console.WriteLine($"EDMX Saved to file: {OutputFileName}");
             }
 
+        }
+        private bool EntityExists(XmlNode xmlNode, string entityType)
+        {
+            return xmlNode.Attributes[ATTRIBUTE_TYPE] == null ? false : Regex.IsMatch(xmlNode.Attributes[ATTRIBUTE_TYPE].Value, ENTITYNAMESPACE + entityType + "\\)?$");
         }
     }
 }
