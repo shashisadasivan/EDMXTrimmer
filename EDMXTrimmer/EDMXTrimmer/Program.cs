@@ -20,6 +20,12 @@ namespace EDMXTrimmer
 
         [Option(
             Required = false,
+            HelpText = "Enter the public name & collection name. All values to be seperated with commas",
+            Separator = ',')]
+        public IEnumerable<string> EntitiesToExclude { get; set; }
+
+        [Option(
+            Required = false,
             HelpText = "Verbose information",
             Default = false)]
         public bool verbose { get; set; }
@@ -32,6 +38,7 @@ namespace EDMXTrimmer
             Default = "Output.edmx",
             HelpText = "Set name of file otherwise will be set to Output.EDMX")]
         public string OutputFileName { get; set; }
+
     }
     class Program
     {
@@ -64,7 +71,7 @@ namespace EDMXTrimmer
             }
             */
 
-            EdmxTrimmer trimmer = new EdmxTrimmer(opt.EdmxFile, opt.OutputFileName, verbose:true, entitiesToKeep:opt.EntitiesToKeep.ToList());
+            EdmxTrimmer trimmer = new EdmxTrimmer(opt.EdmxFile, opt.OutputFileName, verbose:true, entitiesToKeep:opt.EntitiesToKeep.ToList(), entitiesToExclude: opt.EntitiesToExclude.ToList());
             trimmer.AnalyzeFile();
         }
     }

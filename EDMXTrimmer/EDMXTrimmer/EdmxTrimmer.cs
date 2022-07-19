@@ -13,6 +13,7 @@ namespace EDMXTrimmer
         public string EdmxFile { get; private set; }
         public bool Verbose { get; private set; }
         public List<string> EntitiesToKeep { get; private set; }
+        public List<string> EntitiesToExclude { get; private set; }
         public string OutputFileName { get; set; }
 
         private XmlDocument _xmlDocument;
@@ -24,7 +25,12 @@ namespace EDMXTrimmer
         private const string ATTRIBUTE_TYPE = "Type";
         private const string ENTITYNAMESPACE = "Microsoft.Dynamics.DataEntities.";
 
-        public EdmxTrimmer(string edmxFile, string outputFileName,  bool verbose = true, List<String> entitiesToKeep = null)
+        public EdmxTrimmer(
+            string edmxFile, 
+            string outputFileName,  
+            bool verbose = true, 
+            List<String> entitiesToKeep = null,
+            List<String> entitiesToExclude = null)
         {
             this.EdmxFile = edmxFile;
             this.Verbose = verbose;
@@ -34,6 +40,12 @@ namespace EDMXTrimmer
             if(entitiesToKeep != null && entitiesToKeep.Count > 0)
             {
                 this.EntitiesToKeep.AddRange(entitiesToKeep);
+            }
+
+            this.EntitiesToExclude = new List<string>();
+            if (entitiesToExclude != null && entitiesToExclude.Count > 0)
+            {
+                this.EntitiesToExclude.AddRange(entitiesToExclude);
             }
 
             this.LoadFile();
@@ -49,29 +61,55 @@ namespace EDMXTrimmer
         {
             var entitySets = this._xmlDocument.GetElementsByTagName(ENTITY_SET).Cast<XmlNode>().ToList();
             var entityTypes = this._xmlDocument.GetElementsByTagName(ENTITY_TYPE).Cast<XmlNode>().ToList();
-            var entityActions = this._xmlDocument.GetElementsByTagName(ACTION).Cast<XmlNode>().ToList();
 
-            List<String> entityTypesFound = new List<string>();
             //if (this.Verbose)
             //{
             //    // Print list of ALL entities
             //    entitySets.ForEach(n => Console.WriteLine(n.Attributes[ATTRIBUTE_NAME].Value));
             //}
 
-            var entitiesKeep = entitySets.Where(n => this.EntitiesToKeep.Contains(n.Attributes[ATTRIBUTE_NAME].Value)).ToList();
-            entitiesKeep.ForEach(n =>
+            if (this.EntitiesToKeep.Count > 0)
             {
-                string entityType = n.Attributes[ENTITY_TYPE].Value;
-                entityType = entityType.Replace(ENTITYNAMESPACE, "");
-                entityTypesFound.Add(entityType);
-            });
-
-            if (this.Verbose)
-            {
-                Console.WriteLine("Entity definitions found:");
-                entityTypesFound.ForEach(n => Console.WriteLine(n));
+                RemoveAllEntitiesExcept(this.EntitiesToKeep, entitySets, entityTypes);
             }
 
+            if (this.EntitiesToExclude.Count > 0)
+            {
+                RemoveExcludedEntities(this.EntitiesToExclude, entitySets, entityTypes);
+            }
+
+            this._xmlDocument.Save(OutputFileName);
+            if(this.Verbose)
+            {
+                Console.WriteLine($"EDMX Saved to file: {OutputFileName}");
+            }
+
+        }
+
+        private void RemoveAllEntitiesExcept(
+            List<string> entitiesToKeep, 
+            List<XmlNode> entitySets, 
+            List<XmlNode> entityTypes)
+        {
+            var entitiesKeep = entitySets.Where(n => entitiesToKeep.Contains(n.Attributes[ATTRIBUTE_NAME].Value)).ToList();
+
+            RemoveEntitySets(entitySets, entitiesKeep);
+            RemoveEntityTypes(entityTypes, entitySets, entitiesKeep);
+        }
+
+        private void RemoveExcludedEntities(
+            List<string> entitiesToExclude, 
+            List<XmlNode> entitySets, 
+            List<XmlNode> entityTypes)
+        {
+            var entitiesKeep = entitySets.Where(n => !entitiesToExclude.Contains(n.Attributes[ATTRIBUTE_NAME].Value)).ToList();
+
+            RemoveEntitySets(entitySets, entitiesKeep);
+            RemoveEntityTypes(entityTypes, entitySets, entitiesKeep);
+        }
+
+        private void RemoveEntitySets(List<XmlNode> entitySets, List<XmlNode> entitiesKeep)
+        {
             // Remove entities not required (EntitySet)
             entitySets.Except(entitiesKeep).ToList().ForEach(n => n.ParentNode.RemoveChild(n));
             //Remove unwanted Nodes in the Entity Set
@@ -83,7 +121,18 @@ namespace EDMXTrimmer
                 navProperties
                     .ForEach(navProp => navProp.ParentNode.RemoveChild(navProp));
             });
-            
+        }
+
+        private void RemoveEntityTypes(List<XmlNode> entityTypes, List<XmlNode> entitySets, List<XmlNode> entitiesKeep)
+        {
+            List<String> entityTypesFound = new List<string>();
+            entitiesKeep.ForEach(n =>
+            {
+                string entityType = n.Attributes[ENTITY_TYPE].Value;
+                entityType = entityType.Replace(ENTITYNAMESPACE, "");
+                entityTypesFound.Add(entityType);
+            });
+
             // Remove all navigation properties
             this._xmlDocument.GetElementsByTagName(NAVIGATION_PROPERTY).Cast<XmlNode>()
                 .Where(navProp => !entityTypesFound.Any(entityType => EntityExists(navProp, entityType))).ToList()
@@ -98,14 +147,8 @@ namespace EDMXTrimmer
                 .Where(action => !entityTypesFound.Any(entityType => action.ChildNodes.Cast<XmlNode>().
                     Any(childNode => EntityExists(childNode, entityType)))).ToList()
                 .ForEach(n => n.ParentNode.RemoveChild(n));
-
-            this._xmlDocument.Save(OutputFileName);
-            if(this.Verbose)
-            {
-                Console.WriteLine($"EDMX Saved to file: {OutputFileName}");
-            }
-
         }
+
         private bool EntityExists(XmlNode xmlNode, string entityType)
         {
             return xmlNode.Attributes[ATTRIBUTE_TYPE] == null ? false : Regex.IsMatch(xmlNode.Attributes[ATTRIBUTE_TYPE].Value, ENTITYNAMESPACE + entityType + "\\)?$");
