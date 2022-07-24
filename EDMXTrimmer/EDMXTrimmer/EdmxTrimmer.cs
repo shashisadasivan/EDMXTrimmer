@@ -1,9 +1,7 @@
 using System;
 using System.Collections.Generic;
-using System.Text;
 using System.Xml;
 using System.Linq;
-using System.Xml.Linq;
 using System.Text.RegularExpressions;
 
 namespace EDMXTrimmer
@@ -14,6 +12,7 @@ namespace EDMXTrimmer
         public bool Verbose { get; private set; }
         public List<string> EntitiesToKeep { get; private set; }
         public List<string> EntitiesToExclude { get; private set; }
+        public bool EntitiesAreRegularExpressions { get; private set; }
         public string OutputFileName { get; set; }
 
         private XmlDocument _xmlDocument;
@@ -27,17 +26,18 @@ namespace EDMXTrimmer
 
         public EdmxTrimmer(
             string edmxFile, 
-            string outputFileName,  
-            bool verbose = true, 
+            string outputFileName,
+            bool verbose = true,
             List<String> entitiesToKeep = null,
-            List<String> entitiesToExclude = null)
+            List<String> entitiesToExclude = null,
+            bool entitiesAreRegularExpressions = false)
         {
             this.EdmxFile = edmxFile;
             this.Verbose = verbose;
             this.OutputFileName = outputFileName;
 
             this.EntitiesToKeep = new List<string>();
-            if(entitiesToKeep != null && entitiesToKeep.Count > 0)
+            if (entitiesToKeep != null && entitiesToKeep.Count > 0)
             {
                 this.EntitiesToKeep.AddRange(entitiesToKeep);
             }
@@ -48,7 +48,10 @@ namespace EDMXTrimmer
                 this.EntitiesToExclude.AddRange(entitiesToExclude);
             }
 
+            this.EntitiesAreRegularExpressions = entitiesAreRegularExpressions;
+
             this.LoadFile();
+            
         }
 
         private void LoadFile()
@@ -62,12 +65,6 @@ namespace EDMXTrimmer
             var entitySets = this._xmlDocument.GetElementsByTagName(ENTITY_SET).Cast<XmlNode>().ToList();
             var entityTypes = this._xmlDocument.GetElementsByTagName(ENTITY_TYPE).Cast<XmlNode>().ToList();
 
-            //if (this.Verbose)
-            //{
-            //    // Print list of ALL entities
-            //    entitySets.ForEach(n => Console.WriteLine(n.Attributes[ATTRIBUTE_NAME].Value));
-            //}
-
             if (this.EntitiesToKeep.Count > 0)
             {
                 RemoveAllEntitiesExcept(this.EntitiesToKeep, entitySets, entityTypes);
@@ -79,7 +76,7 @@ namespace EDMXTrimmer
             }
 
             this._xmlDocument.Save(OutputFileName);
-            if(this.Verbose)
+            if (this.Verbose)
             {
                 Console.WriteLine($"EDMX Saved to file: {OutputFileName}");
             }
@@ -91,10 +88,11 @@ namespace EDMXTrimmer
             List<XmlNode> entitySets, 
             List<XmlNode> entityTypes)
         {
-            var entitiesKeep = entitySets.Where(n => entitiesToKeep.Contains(n.Attributes[ATTRIBUTE_NAME].Value)).ToList();
+            string regex = EntitySearchTermsToRegularExpression(entitiesToKeep);
+            var entitiesKeep = entitySets.Where(n => Regex.IsMatch(n.Attributes[ATTRIBUTE_NAME].Value, regex)).ToList();
 
             RemoveEntitySets(entitySets, entitiesKeep);
-            RemoveEntityTypes(entityTypes, entitySets, entitiesKeep);
+            RemoveEntityTypes(entityTypes, entitiesKeep);
         }
 
         private void RemoveExcludedEntities(
@@ -102,10 +100,31 @@ namespace EDMXTrimmer
             List<XmlNode> entitySets, 
             List<XmlNode> entityTypes)
         {
-            var entitiesKeep = entitySets.Where(n => !entitiesToExclude.Contains(n.Attributes[ATTRIBUTE_NAME].Value)).ToList();
+            string regex = EntitySearchTermsToRegularExpression(entitiesToExclude);
+            var entitiesKeep = entitySets.Where(n => !Regex.IsMatch(n.Attributes[ATTRIBUTE_NAME].Value, regex)).ToList();
 
             RemoveEntitySets(entitySets, entitiesKeep);
-            RemoveEntityTypes(entityTypes, entitySets, entitiesKeep);
+            RemoveEntityTypes(entityTypes, entitiesKeep);
+        }
+
+        private string EntitySearchTermsToRegularExpression(List<string> entitiesToKeep)
+        {
+            List<string> listRegularExpression = entitiesToKeep.Select(s => EntitySearchTermToRegularExpression(s)).ToList();
+            string regex = String.Join("|", listRegularExpression.ToArray());
+
+            return regex;
+        }
+
+        private string EntitySearchTermToRegularExpression(string searchTerm)
+        {
+            string regex = searchTerm;
+            if (this.EntitiesAreRegularExpressions == false)
+            {
+                regex = "^" + Regex.Escape(searchTerm)
+                    .Replace("\\?", ".")
+                    .Replace("\\*", ".*") + "$";
+            }
+            return regex;
         }
 
         private void RemoveEntitySets(List<XmlNode> entitySets, List<XmlNode> entitiesKeep)
@@ -123,7 +142,7 @@ namespace EDMXTrimmer
             });
         }
 
-        private void RemoveEntityTypes(List<XmlNode> entityTypes, List<XmlNode> entitySets, List<XmlNode> entitiesKeep)
+        private void RemoveEntityTypes(List<XmlNode> entityTypes, List<XmlNode> entitiesKeep)
         {
             List<String> entityTypesFound = new List<string>();
             entitiesKeep.ForEach(n =>
