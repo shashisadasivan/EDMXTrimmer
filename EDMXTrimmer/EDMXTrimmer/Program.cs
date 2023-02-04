@@ -49,7 +49,8 @@ namespace EDMXTrimmer
             
             Options opt = new Options();
             CommandLine.Parser.Default.ParseArguments<Options>(args)
-                .WithParsed<Options>(opts => opt = opts);
+                .WithParsed<Options>(opts => opt = opts)
+                .WithNotParsed<Options>((errs) => { Environment.Exit(160); }); // Exit code 160 is used to indicate that a command line argument was not valid.
 
             /*
             EdmxTrimmerOLD trimmer = new EdmxTrimmerOLD(opt.EdmxFile, opt.verbose);
@@ -63,7 +64,6 @@ namespace EDMXTrimmer
                 trimmer.Run();
             }
             */
-
             EdmxTrimmer trimmer = new EdmxTrimmer(opt.EdmxFile, opt.OutputFileName, verbose:true, entitiesToKeep:opt.EntitiesToKeep.ToList());
             trimmer.AnalyzeFile();
         }
