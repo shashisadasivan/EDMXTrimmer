@@ -1,4 +1,4 @@
-﻿using CommandLine;
+using CommandLine;
 using System.Collections.Generic;
 using System.Linq;
 
@@ -48,7 +48,8 @@ namespace EDMXTrimmer
         {
             Options opt = new Options();
             CommandLine.Parser.Default.ParseArguments<Options>(args)
-                .WithParsed<Options>(opts => opt = opts);
+                .WithParsed<Options>(opts => opt = opts)
+                .WithNotParsed<Options>((errs) => { Environment.Exit(160); }); // Exit code 160 is used to indicate that a command line argument was not valid.
 
             EdmxTrimmer trimmer = new EdmxTrimmer(
                 opt.EdmxFile, 
