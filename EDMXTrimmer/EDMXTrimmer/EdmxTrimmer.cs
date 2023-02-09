@@ -166,6 +166,7 @@ namespace EDMXTrimmer
             this._xmlDocument.GetElementsByTagName(ACTION).Cast<XmlNode>()
                 .Where(action => !entityTypesFound.Any(entityType => action.ChildNodes.Cast<XmlNode>().
                     Any(childNode => EntityExists(childNode, entityType)))).ToList()
+                .ForEach(n => n.ParentNode.RemoveChild(n));
 
             // Determine enums to keep
             List<String> enumTypesFound = new List<string>();
