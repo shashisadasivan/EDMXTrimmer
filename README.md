@@ -1,22 +1,73 @@
 # EDMXTrimmer
-EDMX trimmer for Dynamics 365 Finance & Operations (D365FO)
+EDMX trimmer for OData specifications.
 
-Each metadata file can be a very large file out of the box. The resultant class created from ODataClient.tt can be huge and can cause performance issues. in order to reduce the size the Tags *EntityType* and *EntitySet* are removed.
-For example a 17MB edmx file can be reduced to 1.3MB by only selecting 1 entity (CustomerV3 & CustomersV3)
+Some OData specifications (i.e. the metadata or .edmx file) can be a quite large. One example is the specification for the Dynamics 365 Finance & Operations (D365FO) ERP system's OData API.
+
+Tools that operate on OData specifications in turn create huge files. The can also show bad performance or just crash. On example for such a tool is the Visual Studio extension OData Connected Service.
+
+EDMXTrimmer is used to remove entities and related objects (entity sets, navigation properties, actions and enums) from the OData specification that are not needed. 
+
+For example the D365FO OData specification in version 10.0.29 is a 30 MB .edmx file. If only one entity such as CustomersV3 is required, EDMXTrimmer can reduce the file size to less than 200 KB.
+
+## Build
+EDMXTrimmer is a .Net Core 3.1 console application. It can be built with Visual Studio 2019 or with the .Net Core 3.1 SDK.
 
 ## Command line
-Download the Executables (as long as you have *.Net Core*)
+EDMXTrimmer can be run from the command line. 
 
 ```
 dotnet EDMXTrimmer.dll --edmxfile <your file name here> --entitiesToKeep <entitylist separated by commas>
 ```
 
-**edmxfile** : This is the OData metadata file that you can download off https://<url>/data/$metadata
-Save the ouptut to a file and use it in the command line argument
+On Windows, you can also run the executable `EDMXTrimmer.exe` instead of `dotnet EDMXTrimmer.dll`.
 
-**entitiesToKeep** : Enter the entity names as a CSV string (plural) E.g. CustomersV3,VendorsV2
+The following command line arguments are supported:
 
-### Example
+- **edmxfile** : This is the OData metadata file that you can download off `https://<url>/data/$metadata`. This parameter is required.
+Save the output to a file and use it in the command line argument.
+- **entitiestokeep** : Enter the entity set names (plural) separated by commas. E.g. `CustomersV3,VendorsV2`. All other entities and their related objects will be removed.
+- **enttitiestoexclude** : Enter the entity set names (plural) separated by commas. E.g. `CustomersV3,VendorsV2`. These entites and their related objects will be removed. All other entities will be kept.
+- **outputfile** : The name of the output file. If not specified, the output will be written to file `Output.edmx` in the current directory.
+- **entitiesareregularexpressions** : If this parameter is specified, the entity names are treated as regular expressions. This can be used to keep or remove all entities where their names follow a pattern. E.g. `--entitiesToKeep="^(Cust|Vend).+" --entitiesareregularexpressions` will keep all entities that start with Cust or Vend.
+
+## Examples
+
+### 1) Keep a single entity
 ```
-dotnet EDMXTrimmer.dll --edmxfile "C:\temp\custODataMetadata.edmx" --entitiesToKeep CustomersV3,VendorsV2
+dotnet EDMXTrimmer.dll --edmxfile="C:\temp\custODataMetadata.edmx" --entitiestokeep=CustomersV3
 ```
+This will keep only the CustomersV3 entity and its related objects. All other entities and their related objects will be removed.
+
+### 2) Keep multiple entities
+```
+dotnet EDMXTrimmer.dll --edmxfile="C:\temp\custODataMetadata.edmx" --entitiestokeep=CustomersV3,VendorsV2
+```
+This will keep the CustomersV3 and VendorsV2 entities and their related objects. All other entities and their related objects will be removed.
+
+### 3) Keep entities using wild cards
+```
+dotnet EDMXTrimmer.dll --edmxfile="C:\temp\custODataMetadata.edmx" --entitiestokeep=Cust*
+```
+This will keep all entities that start with Cust. All other entities and their related objects will be removed.
+
+### 4) Exclude entities
+```
+dotnet EDMXTrimmer.dll --edmxfile="C:\temp\custODataMetadata.edmx" --entitiestoexclude=Cust*,VendorsV2
+``` 
+This will remove all entities that start with Cust and the VendorsV2 entity.
+
+### 5) Exclude entities from included entities
+```
+dotnet EDMXTrimmer.dll --edmxfile="C:\temp\custODataMetadata.edmx" --entitiestokeep=Cust* --entitiestoexclude=CustomersV2
+```
+This will first remove all entities that do not start with Cust. From the remaining entities, CustomersV2 will be removed.
+
+Note that `--entitiestoexclude` is applied after `--entitiestokeep`. This means that if you specify both parameters, the entities that are excluded will be removed from the entities that are kept.
+
+### 6) Use regular expressions
+```
+dotnet EDMXTrimmer.dll --edmxfile "C:\temp\custODataMetadata.edmx" --entitiesToKeep="^(Cust|Vend).+" --entitiesareregularexpressions
+```	
+This will keep all entities that start with Cust or Vend. All other entities will be removed.
+
+Note that this could also be achieved with wild cards: `--entitiestokeep=Cust*,Vend*`. The regular expression is only needed if you want to use more complex patterns.
