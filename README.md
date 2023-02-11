@@ -27,7 +27,7 @@ The following command line arguments are supported:
 Save the output to a file and use it in the command line argument.
 - **entitiestokeep** : Enter the entity set names (plural) separated by commas. E.g. `CustomersV3,VendorsV2`. All other entities and their related objects will be removed.
 - **enttitiestoexclude** : Enter the entity set names (plural) separated by commas. E.g. `CustomersV3,VendorsV2`. These entites and their related objects will be removed. All other entities will be kept.
-- **outputfile** : The name of the output file. If not specified, the output will be written to file `Output.edmx` in the current directory.
+- **outputfilename** : The name of the output file. If not specified, the output will be written to file `Output.edmx` in the current directory.
 - **entitiesareregularexpressions** : If this parameter is specified, the entity names are treated as regular expressions. This can be used to keep or remove all entities where their names follow a pattern. E.g. `--entitiesToKeep="^(Cust|Vend).+" --entitiesareregularexpressions` will keep all entities that start with Cust or Vend.
 
 ## Examples
@@ -38,25 +38,31 @@ dotnet EDMXTrimmer.dll --edmxfile="C:\temp\custODataMetadata.edmx" --entitiestok
 ```
 This will keep only the CustomersV3 entity and its related objects. All other entities and their related objects will be removed.
 
-### 2) Keep multiple entities
+### 2) Specify output file
+```
+dotnet EDMXTrimmer.dll --edmxfile="C:\temp\custODataMetadata.edmx" --entitiestokeep=CustomersV3 --outputfilename="C:\temp\custODataMetadataTrimmed.edmx"
+```
+This will keep only the CustomersV3 entity and its related objects. All other entities and their related objects will be removed. The output will be written to the file `C:\temp\custODataMetadataTrimmed.edmx`.
+
+### 3) Keep multiple entities
 ```
 dotnet EDMXTrimmer.dll --edmxfile="C:\temp\custODataMetadata.edmx" --entitiestokeep=CustomersV3,VendorsV2
 ```
 This will keep the CustomersV3 and VendorsV2 entities and their related objects. All other entities and their related objects will be removed.
 
-### 3) Keep entities using wild cards
+### 4) Keep entities using wild cards
 ```
 dotnet EDMXTrimmer.dll --edmxfile="C:\temp\custODataMetadata.edmx" --entitiestokeep=Cust*
 ```
 This will keep all entities that start with Cust. All other entities and their related objects will be removed.
 
-### 4) Exclude entities
+### 5) Exclude entities
 ```
 dotnet EDMXTrimmer.dll --edmxfile="C:\temp\custODataMetadata.edmx" --entitiestoexclude=Cust*,VendorsV2
 ``` 
 This will remove all entities that start with Cust and the VendorsV2 entity.
 
-### 5) Exclude entities from included entities
+### 6) Exclude entities from included entities
 ```
 dotnet EDMXTrimmer.dll --edmxfile="C:\temp\custODataMetadata.edmx" --entitiestokeep=Cust* --entitiestoexclude=CustomersV2
 ```
@@ -64,7 +70,7 @@ This will first remove all entities that do not start with Cust. From the remain
 
 Note that `--entitiestoexclude` is applied after `--entitiestokeep`. This means that if you specify both parameters, the entities that are excluded will be removed from the entities that are kept.
 
-### 6) Use regular expressions
+### 7) Use regular expressions
 ```
 dotnet EDMXTrimmer.dll --edmxfile "C:\temp\custODataMetadata.edmx" --entitiesToKeep="^(Cust|Vend).+" --entitiesareregularexpressions
 ```	
