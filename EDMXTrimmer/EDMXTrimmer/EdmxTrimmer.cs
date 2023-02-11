@@ -73,6 +73,12 @@ namespace EDMXTrimmer
 
             if (this.EntitiesToExclude.Count > 0)
             {
+                if (this.EntitiesToKeep.Count > 0)
+                {
+                    // Update entity sets and types with the remaining elements so that it does not try to remove entities that have already been removed
+                    entitySets = this._xmlDocument.GetElementsByTagName(ENTITY_SET).Cast<XmlNode>().ToList();
+                    entityTypes = this._xmlDocument.GetElementsByTagName(ENTITY_TYPE).Cast<XmlNode>().ToList();
+                }
                 RemoveExcludedEntities(this.EntitiesToExclude, entitySets, entityTypes);
             }
 
