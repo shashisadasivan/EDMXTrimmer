@@ -16,7 +16,7 @@ EDMXTrimmer is a .Net Core 3.1 console application. It can be built with Visual 
 EDMXTrimmer can be run from the command line. 
 
 ```
-dotnet EDMXTrimmer.dll --edmxfile <your file name here> --entitiesToKeep <entitylist separated by commas>
+dotnet EDMXTrimmer.dll --edmxfile=<your file name here> --entitiestokeep=<entitylist separated by commas>
 ```
 
 On Windows, you can also run the executable `EDMXTrimmer.exe` instead of `dotnet EDMXTrimmer.dll`.
