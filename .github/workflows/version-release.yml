@@ -1,23 +1,15 @@
 # Action to build and release a new version of the project
-# The workflow is triggered when a new version tag is pushed to the repository. 
-# The workflow builds the project, creates a release and uploads the EDMXTrimmer.zip file to the release.
-# The workflow uses the GitHub Actions create-release action to create a new release. 
-# The action takes a number of parameters, which are documented in the action's repository. 
-# The tag_name parameter is set to github.ref , which is the tag name that triggered the workflow. 
-# The release is created as a draft. 
+# The workflow is triggered when a new release is created. 
+# The workflow builds the projectand uploads the EDMXTrimmer.zip file to the release.
 # The workflow uses the GitHub Actions upload-release-asset action to upload the EDMXTrimmer.zip file to the release. 
 # The action takes a number of parameters, which are documented in the action's repository. 
-# The upload_url parameter to steps.create_release.outputs.upload_url , which is the URL to upload the asset to. 
-# The asset_path parameter is the path to the asset to upload. 
-# The asset_name parameter is the name of the asset to upload. 
 
-name: Build and release
+name: Build and add to release
 
-# trigger on a new version tag
-on:
-  push:
-    tags:
-      - 'v*' # Push events to matching v*, i.e. v1.0, v20.15.10
+# trigger on a release
+on: 
+  release:
+    types: [published]
 
 jobs:
   build:
@@ -31,26 +23,20 @@ jobs:
     - name: Upload EDMXTrimmer.zip
       uses: actions/upload-artifact@v3
       with:
-        name: EDMXTrimmer
+        name: EDMXTrimmer${{ github.event.release.tag_name }}
         path: zip
-    - name: Create release
-      id: create_release
-      uses: actions/create-release@v1
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      with:
-        tag_name: ${{ github.ref }}
-        release_name: Release ${{ github.ref }}
-        draft: true
-        prerelease: false
 
-    - name: Upload EDMXTrimmer.zip to release
+    - name: Create zip file from content of zip folder
+      run: |
+        cd zip
+        zip -r EDMXTrimmer${{ github.event.release.tag_name }}.zip .
+
+    - name: Upload EDMXTrimmer.zip to release ${{ github.event.release.id }}
       uses: actions/upload-release-asset@v1
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       with:
-        upload_url: ${{ steps.create_release.outputs.upload_url }}
-        asset_path: EDMXTrimmer.zip
-        asset_name: EDMXTrimmer.zip
+        upload_url: https://uploads.github.com/repos/${{ github.repository }}/releases/${{ github.event.release.id }}/assets?name=EDMXTrimmer${{ github.event.release.tag_name }}.zip
+        asset_path: EDMXTrimmer${{ github.event.release.tag_name }}.zip
+        asset_name: EDMXTrimmer${{ github.event.release.tag_name }}.zip
         asset_content_type: application/zip
-
