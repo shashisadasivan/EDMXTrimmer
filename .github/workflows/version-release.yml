@@ -23,21 +23,21 @@ jobs:
     - name: Publish
       run: dotnet publish --configuration Release EDMXTrimmer --output zip
     
-    - name: Upload EDMXTrimmer.zip
+    - name: Upload EDMXTrimmer_${{ github.event.release.tag_name }}.zip
       uses: actions/upload-artifact@v3
       with:
-        name: EDMXTrimmer${{ github.event.release.tag_name }}
+        name: EDMXTrimmer_${{ github.event.release.tag_name }}
         path: zip
 
     - name: Create zip file from content of zip folder
-      run: Compress-Archive -Path zip\* -DestinationPath EDMXTrimmer${{ github.event.release.tag_name }}.zip
+      run: Compress-Archive -Path zip\* -DestinationPath EDMXTrimmer_${{ github.event.release.tag_name }}.zip
 
-    - name: Upload EDMXTrimmer.zip to release ${{ github.event.release.id }}
+    - name: Upload EDMXTrimmer .zip to release ${{ github.event.release.name }}
       uses: actions/upload-release-asset@v1
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       with:
-        upload_url: https://uploads.github.com/repos/${{ github.repository }}/releases/${{ github.event.release.id }}/assets?name=EDMXTrimmer${{ github.event.release.tag_name }}.zip
-        asset_path: EDMXTrimmer${{ github.event.release.tag_name }}.zip
-        asset_name: EDMXTrimmer${{ github.event.release.tag_name }}.zip
+        upload_url: https://uploads.github.com/repos/${{ github.repository }}/releases/${{ github.event.release.id }}/assets?name=EDMXTrimmer_${{ github.event.release.tag_name }}.zip
+        asset_path: EDMXTrimmer_${{ github.event.release.tag_name }}.zip
+        asset_name: EDMXTrimmer_${{ github.event.release.tag_name }}.zip
         asset_content_type: application/zip
