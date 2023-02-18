@@ -16,10 +16,13 @@ jobs:
     runs-on: windows-latest
     steps:
     - uses: actions/checkout@v3
+    
     - name: Build
       run: dotnet build --configuration Release EDMXTrimmer
+    
     - name: Publish
       run: dotnet publish --configuration Release EDMXTrimmer --output zip
+    
     - name: Upload EDMXTrimmer.zip
       uses: actions/upload-artifact@v3
       with:
@@ -27,9 +30,7 @@ jobs:
         path: zip
 
     - name: Create zip file from content of zip folder
-      run: |
-        cd zip
-        zip -r EDMXTrimmer${{ github.event.release.tag_name }}.zip .
+      run: Compress-Archive -Path zip\* -DestinationPath EDMXTrimmer${{ github.event.release.tag_name }}.zip
 
     - name: Upload EDMXTrimmer.zip to release ${{ github.event.release.id }}
       uses: actions/upload-release-asset@v1
