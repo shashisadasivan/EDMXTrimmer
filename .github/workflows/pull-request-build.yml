@@ -1,0 +1,22 @@
+# Build the C# project when receiving a pull request
+
+name: Build for pull request
+
+on: 
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: windows-latest
+    steps:
+    - uses: actions/checkout@v3
+    - name: Build
+      run: dotnet build --configuration Release EDMXTrimmer
+    - name: Publish
+      run: dotnet publish --configuration Release EDMXTrimmer --output zip
+    - name: Upload EDMXTrimmer.zip
+      uses: actions/upload-artifact@v3
+      with:
+        name: EDMXTrimmer.zip
+        path: zip
