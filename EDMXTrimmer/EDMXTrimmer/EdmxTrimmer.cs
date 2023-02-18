@@ -65,6 +65,7 @@ namespace EDMXTrimmer
         {
             var entitySets = this._xmlDocument.GetElementsByTagName(ENTITY_SET).Cast<XmlNode>().ToList();
             var entityTypes = this._xmlDocument.GetElementsByTagName(ENTITY_TYPE).Cast<XmlNode>().ToList();
+            var originalEntityCount = entitySets.Count;
 
             if (this.EntitiesToKeep.Count > 0)
             {
@@ -83,11 +84,13 @@ namespace EDMXTrimmer
             }
 
             this._xmlDocument.Save(OutputFileName);
-            if (this.Verbose)
+            Console.WriteLine($"Trimmed EDMX saved to file: {OutputFileName}");
+            if (Verbose)
             {
-                Console.WriteLine($"EDMX Saved to file: {OutputFileName}");
+                entitySets = this._xmlDocument.GetElementsByTagName(ENTITY_SET).Cast<XmlNode>().ToList();
+                Console.WriteLine($"Original number of entities: {originalEntityCount}");
+                Console.WriteLine($"Number of remaining entities: {entitySets.Count}");
             }
-
         }
 
         private void RemoveAllEntitiesExcept(
@@ -213,7 +216,7 @@ namespace EDMXTrimmer
                 });
                 // Enum from return type
                 // get the first child node with name "ReturnType" if it exists
-                var returnType = action.ChildNodes.Cast<XmlNode>().FirstOrDefault(node => node.Name.Equals("ReturnType"));
+                var returnType = action.ChildNodes.Cast<XmlNode>().FirstOrDefault(node => node.Name.Equals(ATTRIBUTE_RETURN_TYPE));
                 if (returnType != null && returnType.Attributes[ATTRIBUTE_TYPE] != null)
                 {
                     var enumType = returnType.Attributes[ATTRIBUTE_TYPE].Value;
@@ -233,10 +236,6 @@ namespace EDMXTrimmer
                 .ForEach(n => n.ParentNode.RemoveChild(n));
 
             this._xmlDocument.Save(OutputFileName);
-            if(this.Verbose)
-            {
-                Console.WriteLine($"EDMX Saved to file: {OutputFileName}");
-            }
 
         }
 
