@@ -16,14 +16,17 @@ namespace EDMXTrimmer
         public string OutputFileName { get; set; }
 
         private XmlDocument _xmlDocument;
+        private const string SCHEMA = "Schema";
         private const string ENTITY_TYPE = "EntityType";
         private const string ENTITY_SET = "EntitySet";
         private const string NAVIGATION_PROPERTY = "NavigationProperty";
+        private const string NAMESPACE = "Namespace";
         private const string ACTION = "Action";
         private const string ATTRIBUTE_NAME = "Name";
         private const string ATTRIBUTE_TYPE = "Type";
         private const string ATTRIBUTE_RETURN_TYPE = "ReturnType";
-        private const string ENTITYNAMESPACE = "Microsoft.Dynamics.DataEntities.";
+
+        private string ENTITYNAMESPACE = "";
 
         public EdmxTrimmer(
             string edmxFile, 
@@ -63,6 +66,8 @@ namespace EDMXTrimmer
 
         public void AnalyzeFile()
         {
+            this.ENTITYNAMESPACE = this._xmlDocument.GetElementsByTagName(SCHEMA)[0].Attributes[NAMESPACE].Value + ".";
+            
             var entitySets = this._xmlDocument.GetElementsByTagName(ENTITY_SET).Cast<XmlNode>().ToList();
             var entityTypes = this._xmlDocument.GetElementsByTagName(ENTITY_TYPE).Cast<XmlNode>().ToList();
 
