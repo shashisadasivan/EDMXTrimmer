@@ -1,0 +1,43 @@
+# Action to build and release a new version of the project
+# The workflow is triggered when a new release is created. 
+# The workflow builds the projectand uploads the EDMXTrimmer.zip file to the release.
+# The workflow uses the GitHub Actions upload-release-asset action to upload the EDMXTrimmer.zip file to the release. 
+# The action takes a number of parameters, which are documented in the action's repository. 
+
+name: Build and add to release
+
+# trigger on a release
+on: 
+  release:
+    types: [published]
+
+jobs:
+  build:
+    runs-on: windows-latest
+    steps:
+    - uses: actions/checkout@v3
+    
+    - name: Build
+      run: dotnet build --configuration Release EDMXTrimmer
+    
+    - name: Publish
+      run: dotnet publish --configuration Release EDMXTrimmer --output zip
+    
+    - name: Upload EDMXTrimmer_${{ github.event.release.tag_name }}.zip
+      uses: actions/upload-artifact@v3
+      with:
+        name: EDMXTrimmer_${{ github.event.release.tag_name }}
+        path: zip
+
+    - name: Create zip file from content of zip folder
+      run: Compress-Archive -Path zip\* -DestinationPath EDMXTrimmer_${{ github.event.release.tag_name }}.zip
+
+    - name: Upload EDMXTrimmer .zip to release ${{ github.event.release.name }}
+      uses: actions/upload-release-asset@v1
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        upload_url: https://uploads.github.com/repos/${{ github.repository }}/releases/${{ github.event.release.id }}/assets?name=EDMXTrimmer_${{ github.event.release.tag_name }}.zip
+        asset_path: EDMXTrimmer_${{ github.event.release.tag_name }}.zip
+        asset_name: EDMXTrimmer_${{ github.event.release.tag_name }}.zip
+        asset_content_type: application/zip

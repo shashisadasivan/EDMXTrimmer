@@ -83,6 +83,7 @@ namespace EDMXTrimmer
             
             var entitySets = this._xmlDocument.GetElementsByTagName(TAG_ENTITY_SET).Cast<XmlNode>().ToList();
             var entityTypes = this._xmlDocument.GetElementsByTagName(TAG_ENTITY_TYPE).Cast<XmlNode>().ToList();
+            var originalEntityCount = entitySets.Count;
 
             if (this.EntitiesToKeep.Count > 0)
             {
@@ -110,11 +111,13 @@ namespace EDMXTrimmer
             }
 
             this._xmlDocument.Save(OutputFileName);
-            if (this.Verbose)
+            Console.WriteLine($"Trimmed EDMX saved to file: {OutputFileName}");
+            if (Verbose)
             {
-                Console.WriteLine($"EDMX Saved to file: {OutputFileName}");
+                entitySets = this._xmlDocument.GetElementsByTagName(ENTITY_SET).Cast<XmlNode>().ToList();
+                Console.WriteLine($"Original number of entities: {originalEntityCount}");
+                Console.WriteLine($"Number of remaining entities: {entitySets.Count}");
             }
-
         }
 
         private void RemoveAllEntitiesExcept(
@@ -260,10 +263,6 @@ namespace EDMXTrimmer
                 .ForEach(n => n.ParentNode.RemoveChild(n));
 
             this._xmlDocument.Save(OutputFileName);
-            if(this.Verbose)
-            {
-                Console.WriteLine($"EDMX Saved to file: {OutputFileName}");
-            }
 
         }
 
