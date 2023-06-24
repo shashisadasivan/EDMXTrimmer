@@ -29,6 +29,8 @@ Save the output to a file and use it in the command line argument.
 - **enttitiestoexclude** : Enter the entity set names (plural) separated by commas. E.g. `CustomersV3,VendorsV2`. These entites and their related objects will be removed. All other entities will be kept.
 - **outputfilename** : The name of the output file. If not specified, the output will be written to file `Output.edmx` in the current directory.
 - **entitiesareregularexpressions** : If this parameter is specified, the entity names are treated as regular expressions. This can be used to keep or remove all entities where their names follow a pattern. E.g. `--entitiesToKeep="^(Cust|Vend).+" --entitiesareregularexpressions` will keep all entities that start with Cust or Vend.
+- **removeprimaryannotations**: Removes annotations nodes directly under the first schema node.
+- **removeactionimports**: Removes action import nodes.
 
 ## Examples
 
@@ -77,3 +79,9 @@ dotnet EDMXTrimmer.dll --edmxfile "C:\temp\custODataMetadata.edmx" --entitiesToK
 This will keep all entities that start with Cust or Vend. All other entities will be removed.
 
 Note that this could also be achieved with wild cards: `--entitiestokeep=Cust*,Vend*`. The regular expression is only needed if you want to use more complex patterns.
+
+### 8) Remove annotations and action imports
+```
+dotnet EDMXTrimmer.dll --edmxfile "C:\temp\custODataMetadata.edmx" --removeprimaryannotations --removeactionimports
+```
+This will remove all primary annotations and action import nodes from the edmx file.

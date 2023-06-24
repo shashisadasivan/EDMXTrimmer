@@ -14,13 +14,13 @@ namespace EDMXTrimmer
 
         [Option(
             Required = false,
-            HelpText = "Enter the public name & collection name. All values to be seperated with commas. Supports ? and * wildcards.",
+            HelpText = "Enter the public name & collection name. All values to be separated with commas. Supports ? and * wildcards.",
             Separator = ',')]
         public IEnumerable<string> EntitiesToKeep { get; set; }
 
         [Option(
             Required = false,
-            HelpText = "Enter the public name & collection name. All values to be seperated with commas. Supports ? and * wildcards.",
+            HelpText = "Enter the public name & collection name. All values to be separated with commas. Supports ? and * wildcards.",
             Separator = ',')]
         public IEnumerable<string> EntitiesToExclude { get; set; }
 
@@ -42,6 +42,18 @@ namespace EDMXTrimmer
             Default = false)]
         public bool EntitiesAreRegularExpressions { get; set; }
 
+        [Option(
+            Required = false,
+            HelpText = "Primary annotations are removed from the EDMX file",
+            Default = false)]
+        public bool RemovePrimaryAnnotations { get; set; }
+
+        [Option(
+            Required = false,
+            HelpText = "Action imports are removed from the EDMX file",
+            Default = false)]
+        public bool RemoveActionImports { get; set; }
+
     }
     class Program
     {
@@ -53,12 +65,14 @@ namespace EDMXTrimmer
                 .WithNotParsed<Options>((errs) => { Environment.Exit(160); }); // Exit code 160 is used to indicate that a command line argument was not valid.
 
             EdmxTrimmer trimmer = new EdmxTrimmer(
-                opt.EdmxFile, 
-                opt.OutputFileName, 
+                edmxFile:opt.EdmxFile, 
+                outputFileName:opt.OutputFileName, 
                 verbose:opt.Verbose, 
                 entitiesToKeep:opt.EntitiesToKeep.ToList(), 
                 entitiesToExclude:opt.EntitiesToExclude.ToList(),
-                entitiesAreRegularExpressions:opt.EntitiesAreRegularExpressions);
+                entitiesAreRegularExpressions:opt.EntitiesAreRegularExpressions,
+                removePrimaryAnnotations:opt.RemovePrimaryAnnotations,
+                removeActionImports:opt.RemoveActionImports);
             
             trimmer.AnalyzeFile();
         }
