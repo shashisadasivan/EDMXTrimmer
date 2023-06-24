@@ -114,7 +114,7 @@ namespace EDMXTrimmer
             Console.WriteLine($"Trimmed EDMX saved to file: {OutputFileName}");
             if (Verbose)
             {
-                entitySets = this._xmlDocument.GetElementsByTagName(ENTITY_SET).Cast<XmlNode>().ToList();
+                entitySets = this._xmlDocument.GetElementsByTagName(TAG_ENTITY_SET).Cast<XmlNode>().ToList();
                 Console.WriteLine($"Original number of entities: {originalEntityCount}");
                 Console.WriteLine($"Number of remaining entities: {entitySets.Count}");
             }
