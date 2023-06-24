@@ -10,7 +10,7 @@ EDMXTrimmer is used to remove entities and related objects (entity sets, navigat
 For example the D365FO OData specification in version 10.0.29 is a 30 MB .edmx file. If only one entity such as CustomersV3 is required, EDMXTrimmer can reduce the file size to less than 200 KB.
 
 ## Build
-EDMXTrimmer is a .Net Core 3.1 console application. It can be built with Visual Studio 2019 or with the .Net Core 3.1 SDK.
+EDMXTrimmer is a .Net 6 console application. It can be built with Visual Studio 2022 or with the .Net 6 SDK.
 
 ## Command line
 EDMXTrimmer can be run from the command line. 
