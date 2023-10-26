@@ -17,6 +17,9 @@ namespace EDMXTrimmer
         public bool RemoveActionImportsFlag { get; private set; }
         public string OutputFileName { get; set; }
 
+        public IReadOnlyCollection<string>? ComplexTypesToKeep { get; private set; }
+        public IReadOnlyCollection<string>? ComplexTypesToExclude { get; private set; }
+
         private XmlDocument _xmlDocument;
         private XmlNode _firstSchemaNode;
         private string ENTITYNAMESPACE;
@@ -49,7 +52,9 @@ namespace EDMXTrimmer
             List<String> entitiesToExclude = null,
             bool entitiesAreRegularExpressions = false,
             bool removePrimaryAnnotations = false,
-            bool removeActionImports = false)
+            bool removeActionImports = false,
+            IReadOnlyCollection<string> complexTypesToKeep = null,
+            IReadOnlyCollection<string> complexTypesToExclude = null)
         {
             this.EdmxFile = edmxFile;
             this.Verbose = verbose;
@@ -70,6 +75,9 @@ namespace EDMXTrimmer
             this.EntitiesAreRegularExpressions = entitiesAreRegularExpressions;
             this.RemovePrimaryAnnotationsFlag = removePrimaryAnnotations;
             this.RemoveActionImportsFlag = removeActionImports;
+
+            ComplexTypesToKeep = complexTypesToKeep;
+            ComplexTypesToExclude = complexTypesToExclude;
 
             this.LoadFile();
         }
