@@ -54,6 +54,12 @@ namespace EDMXTrimmer
             Default = false)]
         public bool RemoveActionImports { get; set; }
 
+        [Option(
+            Required = false,
+            HelpText = "Function imports are removed from the EDMX file",
+            Default = false)]
+        public bool RemoveFunctionImports { get; set; }
+
     }
     class Program
     {
@@ -72,7 +78,8 @@ namespace EDMXTrimmer
                 entitiesToExclude:opt.EntitiesToExclude.ToList(),
                 entitiesAreRegularExpressions:opt.EntitiesAreRegularExpressions,
                 removePrimaryAnnotations:opt.RemovePrimaryAnnotations,
-                removeActionImports:opt.RemoveActionImports);
+                removeActionImports:opt.RemoveActionImports,
+                removeFunctionImports: opt.RemoveFunctionImports);
             
             trimmer.AnalyzeFile();
         }
