@@ -39,6 +39,8 @@ namespace EDMXTrimmer
         private const string ATTRIBUTE_TARGET = "Target";
         private const string ATTRIBUTE_AXType = "AXType";
 
+        private readonly IDictionary<string, Regex> entityTypeRegexps = new Dictionary<string, Regex>();
+        
         public EdmxTrimmer(
             string edmxFile, 
             string outputFileName,
@@ -311,10 +313,22 @@ namespace EDMXTrimmer
             if(null == typeValue) {
                 return false;
             }
-            if(ENTITYNAMESPACE_ALIAS != null && Regex.IsMatch(typeValue, Regex.Escape(ENTITYNAMESPACE_ALIAS + entityType) + "\\)?$")) {
+            if(ENTITYNAMESPACE_ALIAS != null && IsEntityTypeMatches(entityType, ENTITYNAMESPACE_ALIAS, typeValue)) {
                 return true;
             }
-            return Regex.IsMatch(typeValue, Regex.Escape(ENTITYNAMESPACE + entityType) + "\\)?$");
+            return IsEntityTypeMatches(entityType, ENTITYNAMESPACE, typeValue);
+        }
+
+        private bool IsEntityTypeMatches(string entityType, string @namespace, string source) {
+            var key = @namespace + entityType;
+
+            if(!entityTypeRegexps.TryGetValue(key, out var regex)) {
+                var pattern = Regex.Escape(@namespace + entityType) + "\\)?$";
+                regex = new Regex(pattern);
+                entityTypeRegexps.Add(key, regex);
+            }
+            
+            return regex.IsMatch(source!);
         }
     }
 }
