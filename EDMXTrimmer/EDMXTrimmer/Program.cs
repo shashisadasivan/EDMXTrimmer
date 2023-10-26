@@ -61,6 +61,18 @@ namespace EDMXTrimmer
 
         [Option(
             Required = false,
+            HelpText = "Function imports are removed from the EDMX file",
+            Default = false)]
+        public bool RemoveFunctionImports { get; set; }
+        
+        [Option(
+            Required = false,
+            HelpText = "ComplexType nodes are removed from the EDMX file",
+            Default = false)]
+        public bool RemoveComplexTypes { get; set; }
+
+        [Option(
+            Required = false,
             HelpText = $"Enter action names to keep, works with \"{EntitiesToKeepName}\" and \"{EntitiesToExcludeName}\" options. All values to be separated with commas. Supports ? and * wildcards.",
             Separator = ',')]
         public IReadOnlyCollection<string> ComplexTypesToKeep { get; set; }
@@ -88,9 +100,10 @@ namespace EDMXTrimmer
                 entitiesToExclude:opt.EntitiesToExclude.ToList(),
                 entitiesAreRegularExpressions:opt.EntitiesAreRegularExpressions,
                 removePrimaryAnnotations:opt.RemovePrimaryAnnotations,
-                removeActionImports:opt.RemoveActionImports,
-                complexTypesToKeep: opt.ComplexTypesToKeep,
-                complexTypesToExclude: opt.ComplexTypesToExclude);
+                removeActionImports:opt.RemoveActionImports) {
+                RemoveComplexTypesFlag = opt.RemoveComplexTypes,
+                RemoveFunctionImportsFlag = opt.RemoveFunctionImports
+            };
             
             trimmer.AnalyzeFile();
         }

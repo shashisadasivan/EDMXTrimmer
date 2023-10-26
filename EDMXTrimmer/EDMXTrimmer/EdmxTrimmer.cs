@@ -15,6 +15,8 @@ namespace EDMXTrimmer
         public bool EntitiesAreRegularExpressions { get; private set; }
         public bool RemovePrimaryAnnotationsFlag { get; private set; }
         public bool RemoveActionImportsFlag { get; private set; }
+        public bool RemoveFunctionImportsFlag { get; init; }
+        public bool RemoveComplexTypesFlag { get; init; }
         public string OutputFileName { get; set; }
 
         public IReadOnlyCollection<string>? ComplexTypesToKeep { get; private set; }
@@ -35,6 +37,8 @@ namespace EDMXTrimmer
         private const string TAG_PARAMETER = "Parameter";
         private const string TAG_ENUM_TYPE = "EnumType";
         private const string TAG_ACTION_IMPORT = "ActionImport";
+        private const string TAG_FUNCTION_IMPORT = "FunctionImport";
+        private const string TAG_COMPLEXTYPE = "ComplexType";
         private const string ATTRIBUTE_ALIAS = "Alias";
         private const string ATTRIBUTE_NAMESPACE = "Namespace";
         private const string ATTRIBUTE_NAME = "Name";
@@ -125,6 +129,15 @@ namespace EDMXTrimmer
             if (this.RemoveActionImportsFlag)
             {
                 RemoveActionImports();
+            }
+
+            if (this.RemoveFunctionImportsFlag)
+            {
+                RemoveFunctionImports();
+            }
+            if (this.RemoveComplexTypesFlag)
+            {
+                RemoveComplexTypes();
             }
 
             this._xmlDocument.Save(OutputFileName);
@@ -311,6 +324,20 @@ namespace EDMXTrimmer
         private void RemoveActionImports()
         {
             this._xmlDocument.GetElementsByTagName(TAG_ACTION_IMPORT).Cast<XmlNode>()
+                .ToList()
+                .ForEach(n => n.ParentNode.RemoveChild(n));
+        }
+        private void RemoveFunctionImports()
+        {
+            this._xmlDocument.GetElementsByTagName(TAG_FUNCTION_IMPORT).Cast<XmlNode>()
+                .ToList()
+                .ForEach(n => n.ParentNode.RemoveChild(n));
+        }
+
+        private void RemoveComplexTypes()
+        {
+            _xmlDocument.GetElementsByTagName(TAG_COMPLEXTYPE)
+                .Cast<XmlNode>()
                 .ToList()
                 .ForEach(n => n.ParentNode.RemoveChild(n));
         }
