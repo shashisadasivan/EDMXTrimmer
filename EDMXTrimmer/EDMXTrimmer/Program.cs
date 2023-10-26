@@ -75,13 +75,7 @@ namespace EDMXTrimmer
             Required = false,
             HelpText = $"Enter action names to keep, works with \"{EntitiesToKeepName}\" and \"{EntitiesToExcludeName}\" options. All values to be separated with commas. Supports ? and * wildcards.",
             Separator = ',')]
-        public IReadOnlyCollection<string> ComplexTypesToKeep { get; set; }
-
-        [Option(
-            Required = false,
-            HelpText = $"Enter action names to exclude, works with \"{EntitiesToKeepName}\" and \"{EntitiesToExcludeName}\" options. All values to be separated with commas. Supports ? and * wildcards.",
-            Separator = ',')]
-        public IReadOnlyCollection<string> ComplexTypesToExclude { get; set; }
+        public IReadOnlyCollection<string> ActionsToKeep { get; set; }
     }
     class Program
     {
@@ -102,7 +96,8 @@ namespace EDMXTrimmer
                 removePrimaryAnnotations:opt.RemovePrimaryAnnotations,
                 removeActionImports:opt.RemoveActionImports) {
                 RemoveComplexTypesFlag = opt.RemoveComplexTypes,
-                RemoveFunctionImportsFlag = opt.RemoveFunctionImports
+                RemoveFunctionImportsFlag = opt.RemoveFunctionImports,
+                ActionsToInclude = opt.ActionsToKeep
             };
             
             trimmer.AnalyzeFile();
