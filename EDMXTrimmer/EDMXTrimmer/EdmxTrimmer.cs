@@ -15,7 +15,8 @@ namespace EDMXTrimmer
         public bool EntitiesAreRegularExpressions { get; private set; }
         public bool RemovePrimaryAnnotationsFlag { get; private set; }
         public bool RemoveActionImportsFlag { get; private set; }
-        private bool RemoveFunctionImportsFlag { get; }
+        public bool RemoveFunctionImportsFlag { get; init; }
+        public bool RemoveComplexTypesFlag { get; init; }
         public string OutputFileName { get; set; }
 
         private XmlDocument _xmlDocument;
@@ -34,6 +35,7 @@ namespace EDMXTrimmer
         private const string TAG_ENUM_TYPE = "EnumType";
         private const string TAG_ACTION_IMPORT = "ActionImport";
         private const string TAG_FUNCTION_IMPORT = "FunctionImport";
+        private const string TAG_COMPLEXTYPE = "ComplexType";
         private const string ATTRIBUTE_ALIAS = "Alias";
         private const string ATTRIBUTE_NAMESPACE = "Namespace";
         private const string ATTRIBUTE_NAME = "Name";
@@ -51,8 +53,7 @@ namespace EDMXTrimmer
             List<String> entitiesToExclude = null,
             bool entitiesAreRegularExpressions = false,
             bool removePrimaryAnnotations = false,
-            bool removeActionImports = false,
-            bool removeFunctionImports = false)
+            bool removeActionImports = false)
         {
             this.EdmxFile = edmxFile;
             this.Verbose = verbose;
@@ -73,7 +74,6 @@ namespace EDMXTrimmer
             this.EntitiesAreRegularExpressions = entitiesAreRegularExpressions;
             this.RemovePrimaryAnnotationsFlag = removePrimaryAnnotations;
             this.RemoveActionImportsFlag = removeActionImports;
-            RemoveFunctionImportsFlag = removeFunctionImports;
 
             this.LoadFile();
         }
@@ -126,6 +126,10 @@ namespace EDMXTrimmer
             if (this.RemoveFunctionImportsFlag)
             {
                 RemoveFunctionImports();
+            }
+            if (this.RemoveComplexTypesFlag)
+            {
+                RemoveComplexTypes();
             }
 
             this._xmlDocument.Save(OutputFileName);
@@ -318,6 +322,14 @@ namespace EDMXTrimmer
         private void RemoveFunctionImports()
         {
             this._xmlDocument.GetElementsByTagName(TAG_FUNCTION_IMPORT).Cast<XmlNode>()
+                .ToList()
+                .ForEach(n => n.ParentNode.RemoveChild(n));
+        }
+
+        private void RemoveComplexTypes()
+        {
+            _xmlDocument.GetElementsByTagName(TAG_COMPLEXTYPE)
+                .Cast<XmlNode>()
                 .ToList()
                 .ForEach(n => n.ParentNode.RemoveChild(n));
         }

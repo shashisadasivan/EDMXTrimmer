@@ -59,6 +59,12 @@ namespace EDMXTrimmer
             HelpText = "Function imports are removed from the EDMX file",
             Default = false)]
         public bool RemoveFunctionImports { get; set; }
+        
+        [Option(
+            Required = false,
+            HelpText = "ComplexType nodes are removed from the EDMX file",
+            Default = false)]
+        public bool RemoveComplexTypes { get; set; }
 
     }
     class Program
@@ -78,8 +84,10 @@ namespace EDMXTrimmer
                 entitiesToExclude:opt.EntitiesToExclude.ToList(),
                 entitiesAreRegularExpressions:opt.EntitiesAreRegularExpressions,
                 removePrimaryAnnotations:opt.RemovePrimaryAnnotations,
-                removeActionImports:opt.RemoveActionImports,
-                removeFunctionImports: opt.RemoveFunctionImports);
+                removeActionImports:opt.RemoveActionImports) {
+                RemoveComplexTypesFlag = opt.RemoveComplexTypes,
+                RemoveFunctionImportsFlag = opt.RemoveFunctionImports
+            };
             
             trimmer.AnalyzeFile();
         }
