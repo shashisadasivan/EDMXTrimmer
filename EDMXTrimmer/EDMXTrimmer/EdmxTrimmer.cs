@@ -209,20 +209,37 @@ namespace EDMXTrimmer
         {
             var nameRegex = EntitySearchTermsToRegularExpression(filteringEntities);
 
-            var entitySetsNodes = entitySets
+            // remove items from entityTypes that are referenced by entitySets
+            // those entityTypes will be filtered via the entitySets filtering
+            var entityTypeNamesReferencedByEntitySets = entitySets
+                .Select(n => GetEntityTypeWithoutNamespace(n, TAG_ENTITY_TYPE))
+                .ToList();
+            var entityTypesNotReferencedByEntitySets = entityTypes
+                .Where(node => !entityTypeNamesReferencedByEntitySets.Contains(GetEntityTypeWithoutNamespace(node, ATTRIBUTE_NAME)))
+                .ToList();
+
+            // filter entitySets
+            var entitySetsFiltered = entitySets
                 .Where(n => Regex.IsMatch(n.Attributes[ATTRIBUTE_NAME].Value, nameRegex) ? includeFiltered : !includeFiltered)
                 .ToList();
 
-            var entityTypeNames = entitySetsNodes
+            // filter entityTypes not referenced by entitySets
+            var entityTypesFiltered = entityTypesNotReferencedByEntitySets
+                .Where(node => Regex.IsMatch(node.Attributes[ATTRIBUTE_NAME].Value, nameRegex) ? includeFiltered : !includeFiltered)
+                .ToList();
+
+            // combine names of 
+            // - entityTypes referenced by filtered entitySets 
+            // - filtered entityTypes not referenced by entitySets
+            var entityTypeNames = entitySetsFiltered
                 .Select(n => GetEntityTypeWithoutNamespace(n, TAG_ENTITY_TYPE))
-                .Concat(entityTypes
-                    .Where(node => Regex.IsMatch(node.Attributes[ATTRIBUTE_NAME].Value, nameRegex) ? includeFiltered : !includeFiltered)
+                .Concat(entityTypesFiltered
                     .Select(node => GetEntityTypeWithoutNamespace(node, ATTRIBUTE_NAME))
                 )
                 .Distinct()
                 .ToList();
 
-            return (entitySetsNodes, entityTypeNames);
+            return (entitySetsFiltered, entityTypeNames);
         }
 
         private string EntitySearchTermsToRegularExpression(IEnumerable<string> entitiesToKeep)

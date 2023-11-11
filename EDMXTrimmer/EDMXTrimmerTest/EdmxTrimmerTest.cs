@@ -42,9 +42,13 @@ namespace EDMXTrimmer.Tests
             Assert.Multiple(() =>
             {
                 Assert.That(trimmedEdmx, Does.Contain("<EntitySet Name=\"Photos\""));
+                Assert.That(trimmedEdmx, Does.Contain("<EntityType Name=\"Photo\""));
                 Assert.That(trimmedEdmx, Does.Not.Contain("<EntitySet Name=\"People\""));
+                Assert.That(trimmedEdmx, Does.Not.Contain("<EntityType Name=\"Person\""));
                 Assert.That(trimmedEdmx, Does.Not.Contain("<EntitySet Name=\"Airlines\""));
+                Assert.That(trimmedEdmx, Does.Not.Contain("<EntityType Name=\"Airline\""));
                 Assert.That(trimmedEdmx, Does.Not.Contain("<EntitySet Name=\"Airports\""));
+                Assert.That(trimmedEdmx, Does.Not.Contain("<EntityType Name=\"Airport\""));
             });
         }
 
@@ -159,9 +163,13 @@ namespace EDMXTrimmer.Tests
             Assert.Multiple(() =>
             {
                 Assert.That(trimmedEdmx, Does.Not.Contain("<EntitySet Name=\"Photos\""));
+                Assert.That(trimmedEdmx, Does.Not.Contain("<EntityType Name=\"Photo\""));
                 Assert.That(trimmedEdmx, Does.Not.Contain("<EntitySet Name=\"People\""));
+                Assert.That(trimmedEdmx, Does.Not.Contain("<EntityType Name=\"Person\""));
                 Assert.That(trimmedEdmx, Does.Contain("<EntitySet Name=\"Airlines\""));
+                Assert.That(trimmedEdmx, Does.Contain("<EntityType Name=\"Airline\""));
                 Assert.That(trimmedEdmx, Does.Contain("<EntitySet Name=\"Airports\""));
+                Assert.That(trimmedEdmx, Does.Contain("<EntityType Name=\"Airport\""));
             });
         }
     }
