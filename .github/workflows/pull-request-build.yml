@@ -13,6 +13,8 @@ jobs:
     - uses: actions/checkout@v3
     - name: Build
       run: dotnet build --configuration Release EDMXTrimmer
+    - name: Test
+      run: dotnet test --configuration Release EDMXTrimmer
     - name: Publish
       run: dotnet publish --configuration Release EDMXTrimmer --output zip
     - name: Upload EDMXTrimmer.zip
