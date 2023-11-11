@@ -6,7 +6,7 @@ using System.Text.RegularExpressions;
 
 namespace EDMXTrimmer
 {
-    class EdmxTrimmer
+    public class EdmxTrimmer
     {
         public string EdmxFile { get; private set; }
         public bool Verbose { get; private set; }
