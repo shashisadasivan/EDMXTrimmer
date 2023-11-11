@@ -149,7 +149,8 @@ namespace EDMXTrimmer
             List<XmlNode> entitySets, 
             List<XmlNode> entityTypes)
         {
-            var (entitySetsToKeep, entityTypeNamesToKeep) = FilterByEntity(entitiesToKeep, entitySets, entityTypes, true);
+            var (entitySetsToKeep, entityTypeNamesToKeep) = 
+                FilterByEntityIncluding(entitiesToKeep, entitySets, entityTypes);
 
             RemoveEntitySets(entitySets, entitySetsToKeep);
             RemoveEntityTypes(entityTypes, entityTypeNamesToKeep);
@@ -160,13 +161,51 @@ namespace EDMXTrimmer
             List<XmlNode> entitySets, 
             List<XmlNode> entityTypes)
         {
-            var (entitySetsToKeep, entityTypeNamesToKeep) = FilterByEntity(entitiesToExclude, entitySets, entityTypes, false);
+            var (entitySetsToKeep, entityTypeNamesToKeep) = 
+                FilterByEntityExcluding(entitiesToExclude, entitySets, entityTypes);
 
             RemoveEntitySets(entitySets, entitySetsToKeep);
             RemoveEntityTypes(entityTypes, entityTypeNamesToKeep);
         }
 
-        private (List<XmlNode> EntitySetsToKeep, IReadOnlyCollection<string> EntityTypeNamesToKeep) FilterByEntity(IEnumerable<string> filteringEntities, IEnumerable<XmlNode> entitySets, IEnumerable<XmlNode> entityTypes, bool includeFiltered) 
+        /// <summary>
+        /// Returns a list of EntitySets and EntityTypes that match the filteringEntities.
+        /// </summary>
+        /// <param name="filteringEntities">The entities to filter by.</param>
+        /// <param name="entitySets">The entity sets to filter.</param>
+        /// <param name="entityTypes">The entities to filter.</param>
+        /// <returns>A tuple of filtered entity sets and filtered entity names.</returns>
+        internal (List<XmlNode> EntitySetsToKeep, IReadOnlyCollection<string> EntityTypeNamesToKeep) 
+            FilterByEntityIncluding(
+                IEnumerable<string> filteringEntities, 
+                IEnumerable<XmlNode> entitySets, 
+                IEnumerable<XmlNode> entityTypes)
+        {
+            return FilterByEntity(filteringEntities, entitySets, entityTypes, true);
+        }
+
+        /// <summary>
+        /// Returns a list of EntitySets and EntityTypes that do not match the filteringEntities.
+        /// </summary>
+        /// <param name="filteringEntities">The entities that should not be part of the result.</param>
+        /// <param name="entitySets">The entity sets to filter.</param>
+        /// <param name="entityTypes">The entities to filter.</param>
+        /// <returns>A tuple of filtered entity sets and filtered entity names.</returns>
+        internal (List<XmlNode> EntitySetsToKeep, IReadOnlyCollection<string> EntityTypeNamesToKeep) 
+            FilterByEntityExcluding(
+                IEnumerable<string> filteringEntities, 
+                IEnumerable<XmlNode> entitySets, 
+                IEnumerable<XmlNode> entityTypes)
+        {
+            return FilterByEntity(filteringEntities, entitySets, entityTypes, false);
+        }
+        
+        private (List<XmlNode> EntitySetsToKeep, IReadOnlyCollection<string> EntityTypeNamesToKeep) 
+            FilterByEntity(
+                IEnumerable<string> filteringEntities, 
+                IEnumerable<XmlNode> entitySets, 
+                IEnumerable<XmlNode> entityTypes, 
+                bool includeFiltered) 
         {
             var nameRegex = EntitySearchTermsToRegularExpression(filteringEntities);
 
