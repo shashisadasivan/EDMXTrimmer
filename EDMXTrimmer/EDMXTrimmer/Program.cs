@@ -7,18 +7,23 @@ namespace EDMXTrimmer
 {
     public class Options
     {
+        private const string EntitiesToKeepName = "entitiestokeep";
+        private const string EntitiesToExcludeName = "entitiestoexclude";
+
         [Option(
             Required = true,
             HelpText = "EDMX source file")]
         public string EdmxFile { get; set; }
 
         [Option(
+            longName: EntitiesToKeepName,
             Required = false,
             HelpText = "Enter the public name & collection name. All values to be separated with commas. Supports ? and * wildcards.",
             Separator = ',')]
         public IEnumerable<string> EntitiesToKeep { get; set; }
 
         [Option(
+            longName: EntitiesToExcludeName,
             Required = false,
             HelpText = "Enter the public name & collection name. All values to be separated with commas. Supports ? and * wildcards.",
             Separator = ',')]
@@ -54,6 +59,23 @@ namespace EDMXTrimmer
             Default = false)]
         public bool RemoveActionImports { get; set; }
 
+        [Option(
+            Required = false,
+            HelpText = "Function imports are removed from the EDMX file",
+            Default = false)]
+        public bool RemoveFunctionImports { get; set; }
+        
+        [Option(
+            Required = false,
+            HelpText = "ComplexType nodes are removed from the EDMX file",
+            Default = false)]
+        public bool RemoveComplexTypes { get; set; }
+
+        [Option(
+            Required = false,
+            HelpText = $"Enter action names to keep, works with \"{EntitiesToKeepName}\" and \"{EntitiesToExcludeName}\" options. All values to be separated with commas. Supports ? and * wildcards.",
+            Separator = ',')]
+        public IReadOnlyCollection<string> ActionsToKeep { get; set; }
     }
     class Program
     {
@@ -72,7 +94,11 @@ namespace EDMXTrimmer
                 entitiesToExclude:opt.EntitiesToExclude.ToList(),
                 entitiesAreRegularExpressions:opt.EntitiesAreRegularExpressions,
                 removePrimaryAnnotations:opt.RemovePrimaryAnnotations,
-                removeActionImports:opt.RemoveActionImports);
+                removeActionImports:opt.RemoveActionImports) {
+                RemoveComplexTypesFlag = opt.RemoveComplexTypes,
+                RemoveFunctionImportsFlag = opt.RemoveFunctionImports,
+                ActionsToInclude = opt.ActionsToKeep
+            };
             
             trimmer.AnalyzeFile();
         }

@@ -6,7 +6,7 @@ using System.Text.RegularExpressions;
 
 namespace EDMXTrimmer
 {
-    class EdmxTrimmer
+    public class EdmxTrimmer
     {
         public string EdmxFile { get; private set; }
         public bool Verbose { get; private set; }
@@ -15,11 +15,16 @@ namespace EDMXTrimmer
         public bool EntitiesAreRegularExpressions { get; private set; }
         public bool RemovePrimaryAnnotationsFlag { get; private set; }
         public bool RemoveActionImportsFlag { get; private set; }
+        public bool RemoveFunctionImportsFlag { get; init; }
+        public bool RemoveComplexTypesFlag { get; init; }
         public string OutputFileName { get; set; }
+
+        public IReadOnlyCollection<string> ActionsToInclude { get; set; }
 
         private XmlDocument _xmlDocument;
         private XmlNode _firstSchemaNode;
         private string ENTITYNAMESPACE;
+        private string ENTITYNAMESPACE_ALIAS;
         private const string TAG_SCHEMA = "Schema";
         private const string TAG_ENTITY_TYPE = "EntityType";
         private const string TAG_ENTITY_SET = "EntitySet";
@@ -31,12 +36,17 @@ namespace EDMXTrimmer
         private const string TAG_PARAMETER = "Parameter";
         private const string TAG_ENUM_TYPE = "EnumType";
         private const string TAG_ACTION_IMPORT = "ActionImport";
+        private const string TAG_FUNCTION_IMPORT = "FunctionImport";
+        private const string TAG_COMPLEXTYPE = "ComplexType";
+        private const string ATTRIBUTE_ALIAS = "Alias";
         private const string ATTRIBUTE_NAMESPACE = "Namespace";
         private const string ATTRIBUTE_NAME = "Name";
         private const string ATTRIBUTE_TYPE = "Type";
         private const string ATTRIBUTE_TARGET = "Target";
         private const string ATTRIBUTE_AXType = "AXType";
 
+        private readonly IDictionary<string, Regex> entityTypeRegexps = new Dictionary<string, Regex>();
+        
         public EdmxTrimmer(
             string edmxFile, 
             string outputFileName,
@@ -81,6 +91,11 @@ namespace EDMXTrimmer
             this._firstSchemaNode = this._xmlDocument.GetElementsByTagName(TAG_SCHEMA)[0];
             this.ENTITYNAMESPACE = this._firstSchemaNode.Attributes[ATTRIBUTE_NAMESPACE].Value + ".";
             
+            var aliasAttrValue = this._firstSchemaNode.Attributes[ATTRIBUTE_ALIAS]?.Value.Trim();
+            if(!string.IsNullOrEmpty(aliasAttrValue)) {
+                this.ENTITYNAMESPACE_ALIAS = aliasAttrValue + ".";
+            }
+
             var entitySets = this._xmlDocument.GetElementsByTagName(TAG_ENTITY_SET).Cast<XmlNode>().ToList();
             var entityTypes = this._xmlDocument.GetElementsByTagName(TAG_ENTITY_TYPE).Cast<XmlNode>().ToList();
             var originalEntityCount = entitySets.Count;
@@ -110,6 +125,15 @@ namespace EDMXTrimmer
                 RemoveActionImports();
             }
 
+            if (this.RemoveFunctionImportsFlag)
+            {
+                RemoveFunctionImports();
+            }
+            if (this.RemoveComplexTypesFlag)
+            {
+                RemoveComplexTypes();
+            }
+
             this._xmlDocument.Save(OutputFileName);
             Console.WriteLine($"Trimmed EDMX saved to file: {OutputFileName}");
             if (Verbose)
@@ -125,11 +149,11 @@ namespace EDMXTrimmer
             List<XmlNode> entitySets, 
             List<XmlNode> entityTypes)
         {
-            string regex = EntitySearchTermsToRegularExpression(entitiesToKeep);
-            var entitiesKeep = entitySets.Where(n => Regex.IsMatch(n.Attributes[ATTRIBUTE_NAME].Value, regex)).ToList();
+            var (entitySetsToKeep, entityTypeNamesToKeep) = 
+                FilterByEntityIncluding(entitiesToKeep, entitySets, entityTypes);
 
-            RemoveEntitySets(entitySets, entitiesKeep);
-            RemoveEntityTypes(entityTypes, entitiesKeep);
+            RemoveEntitySets(entitySets, entitySetsToKeep);
+            RemoveEntityTypes(entityTypes, entityTypeNamesToKeep);
         }
 
         private void RemoveExcludedEntities(
@@ -137,19 +161,92 @@ namespace EDMXTrimmer
             List<XmlNode> entitySets, 
             List<XmlNode> entityTypes)
         {
-            string regex = EntitySearchTermsToRegularExpression(entitiesToExclude);
-            var entitiesKeep = entitySets.Where(n => !Regex.IsMatch(n.Attributes[ATTRIBUTE_NAME].Value, regex)).ToList();
+            var (entitySetsToKeep, entityTypeNamesToKeep) = 
+                FilterByEntityExcluding(entitiesToExclude, entitySets, entityTypes);
 
-            RemoveEntitySets(entitySets, entitiesKeep);
-            RemoveEntityTypes(entityTypes, entitiesKeep);
+            RemoveEntitySets(entitySets, entitySetsToKeep);
+            RemoveEntityTypes(entityTypes, entityTypeNamesToKeep);
         }
 
-        private string EntitySearchTermsToRegularExpression(List<string> entitiesToKeep)
+        /// <summary>
+        /// Returns a list of EntitySets and EntityTypes that match the filteringEntities.
+        /// </summary>
+        /// <param name="filteringEntities">The entities to filter by.</param>
+        /// <param name="entitySets">The entity sets to filter.</param>
+        /// <param name="entityTypes">The entities to filter.</param>
+        /// <returns>A tuple of filtered entity sets and filtered entity names.</returns>
+        internal (List<XmlNode> EntitySetsToKeep, IReadOnlyCollection<string> EntityTypeNamesToKeep) 
+            FilterByEntityIncluding(
+                IEnumerable<string> filteringEntities, 
+                IEnumerable<XmlNode> entitySets, 
+                IEnumerable<XmlNode> entityTypes)
         {
-            List<string> listRegularExpression = entitiesToKeep.Select(s => EntitySearchTermToRegularExpression(s)).ToList();
-            string regex = String.Join("|", listRegularExpression.ToArray());
+            return FilterByEntity(filteringEntities, entitySets, entityTypes, true);
+        }
 
-            return regex;
+        /// <summary>
+        /// Returns a list of EntitySets and EntityTypes that do not match the filteringEntities.
+        /// </summary>
+        /// <param name="filteringEntities">The entities that should not be part of the result.</param>
+        /// <param name="entitySets">The entity sets to filter.</param>
+        /// <param name="entityTypes">The entities to filter.</param>
+        /// <returns>A tuple of filtered entity sets and filtered entity names.</returns>
+        internal (List<XmlNode> EntitySetsToKeep, IReadOnlyCollection<string> EntityTypeNamesToKeep) 
+            FilterByEntityExcluding(
+                IEnumerable<string> filteringEntities, 
+                IEnumerable<XmlNode> entitySets, 
+                IEnumerable<XmlNode> entityTypes)
+        {
+            return FilterByEntity(filteringEntities, entitySets, entityTypes, false);
+        }
+        
+        private (List<XmlNode> EntitySetsToKeep, IReadOnlyCollection<string> EntityTypeNamesToKeep) 
+            FilterByEntity(
+                IEnumerable<string> filteringEntities, 
+                IEnumerable<XmlNode> entitySets, 
+                IEnumerable<XmlNode> entityTypes, 
+                bool includeFiltered) 
+        {
+            var nameRegex = EntitySearchTermsToRegularExpression(filteringEntities);
+
+            // remove items from entityTypes that are referenced by entitySets
+            // those entityTypes will be filtered via the entitySets filtering
+            var entityTypeNamesReferencedByEntitySets = entitySets
+                .Select(n => GetEntityTypeWithoutNamespace(n, TAG_ENTITY_TYPE))
+                .ToList();
+            var entityTypesNotReferencedByEntitySets = entityTypes
+                .Where(node => !entityTypeNamesReferencedByEntitySets.Contains(GetEntityTypeWithoutNamespace(node, ATTRIBUTE_NAME)))
+                .ToList();
+
+            // filter entitySets
+            var entitySetsFiltered = entitySets
+                .Where(n => Regex.IsMatch(n.Attributes[ATTRIBUTE_NAME].Value, nameRegex) ? includeFiltered : !includeFiltered)
+                .ToList();
+
+            // filter entityTypes not referenced by entitySets
+            var entityTypesFiltered = entityTypesNotReferencedByEntitySets
+                .Where(node => Regex.IsMatch(node.Attributes[ATTRIBUTE_NAME].Value, nameRegex) ? includeFiltered : !includeFiltered)
+                .ToList();
+
+            // combine names of 
+            // - entityTypes referenced by filtered entitySets 
+            // - filtered entityTypes not referenced by entitySets
+            var entityTypeNames = entitySetsFiltered
+                .Select(n => GetEntityTypeWithoutNamespace(n, TAG_ENTITY_TYPE))
+                .Concat(entityTypesFiltered
+                    .Select(node => GetEntityTypeWithoutNamespace(node, ATTRIBUTE_NAME))
+                )
+                .Distinct()
+                .ToList();
+
+            return (entitySetsFiltered, entityTypeNames);
+        }
+
+        private string EntitySearchTermsToRegularExpression(IEnumerable<string> entitiesToKeep)
+        {
+            var parts = entitiesToKeep.Select(EntitySearchTermToRegularExpression);
+
+            return String.Join("|", parts);
         }
 
         private string EntitySearchTermToRegularExpression(string searchTerm)
@@ -164,7 +261,7 @@ namespace EDMXTrimmer
             return regex;
         }
 
-        private void RemoveEntitySets(List<XmlNode> entitySets, List<XmlNode> entitiesKeep)
+        private void RemoveEntitySets(IEnumerable<XmlNode> entitySets, List<XmlNode> entitiesKeep)
         {
             // Remove entities not required (EntitySet)
             entitySets.Except(entitiesKeep).ToList().ForEach(n => n.ParentNode.RemoveChild(n));
@@ -179,81 +276,52 @@ namespace EDMXTrimmer
             });
         }
 
-        private void RemoveEntityTypes(List<XmlNode> entityTypes, List<XmlNode> entitiesKeep)
+        private void RemoveEntityTypes(IReadOnlyCollection<XmlNode> entityTypes, IReadOnlyCollection<string> entitiesNamesToKeep)
         {
-            List<String> entityTypesFound = new List<string>();
-            entitiesKeep.ForEach(n =>
-            {
-                string entityType = n.Attributes[TAG_ENTITY_TYPE].Value;
-                entityType = entityType.Replace(ENTITYNAMESPACE, "");
-                entityTypesFound.Add(entityType);
-            });
-
             // Remove all navigation properties
-            this._xmlDocument.GetElementsByTagName(TAG_NAVIGATION_PROPERTY).Cast<XmlNode>()
-                .Where(navProp => !entityTypesFound.Any(entityType => EntityExists(navProp, entityType))).ToList()
-                .ForEach(n => n.ParentNode.RemoveChild(n));
+            RemoveNodes(_xmlDocument
+                .GetElementsByTagName(TAG_NAVIGATION_PROPERTY)
+                .Cast<XmlNode>()
+                .Where(navProp => !entitiesNamesToKeep.Any(entityType => NodeReferencesEntity(navProp, entityType)))
+            );
 
             // Remove entity not required (EntityType)
-            var entityTypesKeep = entityTypes.Where(n => entityTypesFound.Contains(n.Attributes[ATTRIBUTE_NAME].Value)).ToList();
-            entityTypes.Except(entityTypesKeep).ToList().ForEach(n => n.ParentNode.RemoveChild(n));
-
+            var entityTypesToKeep = entityTypes.Where(n => entitiesNamesToKeep.Contains(n.Attributes[ATTRIBUTE_NAME].Value)).ToList();
+            RemoveNodes(entityTypes.Except(entityTypesToKeep));
+            
             // Remove all Actions         
-            this._xmlDocument.GetElementsByTagName(TAG_ACTION).Cast<XmlNode>()
-                .Where(action => !entityTypesFound.Any(entityType => action.ChildNodes.Cast<XmlNode>().
-                    Any(childNode => EntityExists(childNode, entityType)))).ToList()
-                .ForEach(n => n.ParentNode.RemoveChild(n));
+            var allActions = _xmlDocument
+                .GetElementsByTagName(TAG_ACTION)
+                .Cast<XmlNode>();
+
+            var actionsToRemove = allActions.Where(actionNode => {
+                if(ActionsToInclude != null && ActionsToInclude.Any()) {
+                    return true != ActionIsWhitelisted(GetActionName(actionNode));
+                }
+                return !ActionReferencesAnyEntity(actionNode);
+            });
+
+            RemoveNodes(actionsToRemove);
 
             // Determine enums to keep
             List<String> enumTypesFound = new List<string>();
             // Enums from entity type properties
-            entityTypesKeep.ForEach(n =>
-            {
-                var properties = n.ChildNodes.Cast<XmlNode>().Where(prop => prop.Name.Equals(TAG_PROPERTY)).ToList();
-                properties.ForEach(prop =>
-                {
-                    if (prop.Attributes[ATTRIBUTE_TYPE] != null)
-                    {
-                        var enumType = prop.Attributes[ATTRIBUTE_TYPE].Value;
-                        if (enumType.StartsWith(ENTITYNAMESPACE))
-                        {
-                            enumType = enumType.Replace(ENTITYNAMESPACE, "");
-                            enumTypesFound.Add(enumType);
-                        }
-                    }
-                });
-            });
+
+            var propertiesTypes = entityTypesToKeep.SelectMany(typeNode => GetEntityTypesFromNodeChildren(typeNode, TAG_PROPERTY));
+            enumTypesFound.AddRange(propertiesTypes);
+
             // Enums from actions  
             var entityActions = this._xmlDocument.GetElementsByTagName(TAG_ACTION).Cast<XmlNode>().ToList();     
-            entityActions.ForEach(action =>
+            entityActions.ForEach(actionNode =>
             {
                 // Enums from parameters
-                var parameters = action.ChildNodes.Cast<XmlNode>().Where(param => param.Name.Equals(TAG_PARAMETER)).ToList();
-                parameters.ForEach(param =>
-                {
-                    if (param.Attributes[ATTRIBUTE_TYPE] != null)
-                    {
-                        var enumType = param.Attributes[ATTRIBUTE_TYPE].Value;
-                        if (enumType.StartsWith(ENTITYNAMESPACE))
-                        {
-                            enumType = enumType.Replace(ENTITYNAMESPACE, "");
-                            enumTypesFound.Add(enumType);
-                        }
-                    }
-                });
+                var parametersTypes = GetEntityTypesFromNodeChildren(actionNode, TAG_PARAMETER)!;
+                enumTypesFound.AddRange(parametersTypes);
+
                 // Enum from return type
                 // get the first child node with name "ReturnType" if it exists
-                var returnType = action.ChildNodes.Cast<XmlNode>().FirstOrDefault(node => node.Name.Equals(TAG_RETURN_TYPE));
-                if (returnType != null && returnType.Attributes[ATTRIBUTE_TYPE] != null)
-                {
-                    var enumType = returnType.Attributes[ATTRIBUTE_TYPE].Value;
-                    if (enumType.StartsWith(ENTITYNAMESPACE))
-                    {
-                        enumType = enumType.Replace(ENTITYNAMESPACE, "");
-                        enumTypesFound.Add(enumType);
-                    }
-                }
-                
+                var returnType = GetEntityTypesFromNodeChildren(actionNode, TAG_RETURN_TYPE)!;
+                enumTypesFound.Add(returnType.FirstOrDefault());
             });
             // Remove unused Enums except AXType
             this._xmlDocument.GetElementsByTagName(TAG_ENUM_TYPE).Cast<XmlNode>()
@@ -263,7 +331,75 @@ namespace EDMXTrimmer
                 .ForEach(n => n.ParentNode.RemoveChild(n));
 
             this._xmlDocument.Save(OutputFileName);
+            
+            return;
 
+            IEnumerable<string> GetEntityTypesFromNodeChildren(XmlNode typeNode, string nodeName) =>
+                typeNode
+                    .ChildNodes
+                    .Cast<XmlNode>()
+                    .Where(prop => prop.Name.Equals(nodeName))
+                    .Select(RemoveNamespace)
+                    .Where(name => name != null)
+                    .ToList();
+
+            string RemoveNamespace(XmlNode xmlNode) {
+                var enumType = xmlNode.Attributes[ATTRIBUTE_TYPE]?.Value;
+
+                if(enumType == null) {
+                    return null;
+                }
+                if(ENTITYNAMESPACE_ALIAS != null && enumType.StartsWith(ENTITYNAMESPACE_ALIAS)) {
+                    return enumType.Replace(ENTITYNAMESPACE_ALIAS, "");
+                }
+                if(enumType.StartsWith(ENTITYNAMESPACE)) {
+                    return enumType.Replace(ENTITYNAMESPACE, "");
+                }
+
+                return null;
+            }
+
+            bool ActionIsWhitelisted(string? actionName) {
+                if(null == actionName || null == ActionsToInclude || !ActionsToInclude.Any()) {
+                    return false;
+                }
+                var regex = GetRegexOrCreate("ACTIONS-TO-INCLUDE", () => EntitySearchTermsToRegularExpression(ActionsToInclude));
+                return regex.IsMatch(actionName);
+            }
+
+            bool ActionReferencesAnyEntity(XmlNode actionNode) => entitiesNamesToKeep.Any(entityType => AnyChildReferencesEntity(actionNode, entityType));
+
+            bool AnyChildReferencesEntity(XmlNode action, string entityType) =>
+                action
+                    .ChildNodes
+                    .Cast<XmlNode>()
+                    .Any(childNode => NodeReferencesEntity(childNode, entityType));
+
+            bool NodeReferencesEntity(XmlNode xmlNode, string entityType) {
+                var typeValue = xmlNode.Attributes[ATTRIBUTE_TYPE]?.Value;
+
+                if(null == typeValue) {
+                    return false;
+                }
+                if(ENTITYNAMESPACE_ALIAS != null && IsEntityTypeMatches(entityType, ENTITYNAMESPACE_ALIAS, typeValue)) {
+                    return true;
+                }
+                return IsEntityTypeMatches(entityType, ENTITYNAMESPACE, typeValue);
+            }
+        }
+
+        private static string GetActionName(XmlNode actionNode) => actionNode.Attributes[ATTRIBUTE_NAME]?.Value;
+
+        private string GetEntityTypeWithoutNamespace(XmlNode n, string attributeName) {
+            var entityType = n.Attributes[attributeName]?.Value;
+
+            if(ENTITYNAMESPACE_ALIAS != null) {
+                var replaced = entityType.Replace(ENTITYNAMESPACE_ALIAS, "");
+                if(replaced != entityType) {
+                    return replaced;
+                }
+            }
+            return entityType.Replace(ENTITYNAMESPACE, "");
         }
 
         private void RemovePrimaryAnnotations()
@@ -281,10 +417,44 @@ namespace EDMXTrimmer
                 .ToList()
                 .ForEach(n => n.ParentNode.RemoveChild(n));
         }
-
-        private bool EntityExists(XmlNode xmlNode, string entityType)
+        private void RemoveFunctionImports()
         {
-            return xmlNode.Attributes[ATTRIBUTE_TYPE] == null ? false : Regex.IsMatch(xmlNode.Attributes[ATTRIBUTE_TYPE].Value, ENTITYNAMESPACE + entityType + "\\)?$");
+            this._xmlDocument.GetElementsByTagName(TAG_FUNCTION_IMPORT).Cast<XmlNode>()
+                .ToList()
+                .ForEach(n => n.ParentNode.RemoveChild(n));
+        }
+
+        private void RemoveComplexTypes()
+        {
+            _xmlDocument.GetElementsByTagName(TAG_COMPLEXTYPE)
+                .Cast<XmlNode>()
+                .ToList()
+                .ForEach(n => n.ParentNode.RemoveChild(n));
+        }
+
+        private bool IsEntityTypeMatches(string entityType, string @namespace, string source) {
+            var key = "ENTITY-" + @namespace + entityType;
+            var regex = GetRegexOrCreate(key, () => Regex.Escape(@namespace + entityType) + "\\)?$");
+            
+            return regex.IsMatch(source!);
+        }
+
+        private Regex GetRegexOrCreate(string key, Func<string> patternFactory) {
+            if(entityTypeRegexps.TryGetValue(key!, out var cached)) {
+                return cached;
+            }
+
+            var pattern = patternFactory();
+            var target = new Regex(pattern!);
+            
+            entityTypeRegexps.Add(key, target);
+            return target;
+        }
+
+        private static void RemoveNodes(IEnumerable<XmlNode> nodesToRemove) {
+            foreach(var node in nodesToRemove!.ToList()) {
+                node.ParentNode.RemoveChild(node);
+            }
         }
     }
 }
