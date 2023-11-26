@@ -20,6 +20,14 @@ jobs:
     - name: Build
       run: dotnet build --configuration Release EDMXTrimmer
     
+    - name: Test
+      run: dotnet test --logger:nunit --configuration Release EDMXTrimmer
+    - name: Publish Test Results
+      uses: EnricoMi/publish-unit-test-result-action/composite@v2
+      with:
+        files: '**/TestResults/*.xml'
+        comment_mode: 'off'
+    
     - name: Publish
       run: dotnet publish --configuration Release EDMXTrimmer --output zip
     
